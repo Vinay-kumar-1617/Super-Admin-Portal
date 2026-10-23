@@ -1,8 +1,10 @@
-import { StatusPill } from './shared'
+import { GatedAction, StatusPill } from './shared'
+import { useFocusRow } from './useRecordFocus'
 import { expiryRows as allExpiries, expiryStatus, type ExpiryRow } from './complianceAdminData'
+import type { ComplianceCheck } from './compliancePermissions'
 
-type ExpiryFilter = 'All' | 'Due soon' | 'Lapsed' | 'Reminded'
-const filterOptions: ExpiryFilter[] = ['All', 'Due soon', 'Lapsed', 'Reminded']
+type ExpiryFilter = 'All' | 'Due soon' | 'Next 30 days' | 'Lapsed' | 'Reminded'
+const filterOptions: ExpiryFilter[] = ['All', 'Due soon', 'Next 30 days', 'Lapsed', 'Reminded']
 
 type ExpirySectionProps = {
   rows: ExpiryRow[]
@@ -10,9 +12,20 @@ type ExpirySectionProps = {
   onFilterChange: (value: ExpiryFilter) => void
   onRemind: (id: string) => void
   onRemindAll: () => void
+  focusId?: string
+  check: ComplianceCheck
 }
 
-export default function ExpirySection({ rows, filter, onFilterChange, onRemind, onRemindAll }: ExpirySectionProps) {
+export default function ExpirySection({
+  rows,
+  filter,
+  onFilterChange,
+  onRemind,
+  onRemindAll,
+  focusId,
+  check,
+}: ExpirySectionProps) {
+  const focusedRowRef = useFocusRow(focusId)
   const lapsed = allExpiries.filter((row) => row.daysLeft < 0).length
   const dueSoon = allExpiries.filter((row) => row.daysLeft >= 0 && row.daysLeft <= 7).length
   const unreminded = allExpiries.filter((row) => row.daysLeft <= 7 && !row.reminded).length
@@ -39,9 +52,15 @@ export default function ExpirySection({ rows, filter, onFilterChange, onRemind, 
         <span className="sa-panel-sub">
           {lapsed} lapsed · {dueSoon} due within 7 days · lapsed records auto-flag the account until cleared
         </span>
-        <button type="button" className="sa-btn-ghost" onClick={onRemindAll} disabled={unreminded === 0}>
+        <GatedAction
+          check={check}
+          permission="expiry.remind"
+          className="sa-btn-ghost"
+          onClick={onRemindAll}
+          disabled={unreminded === 0}
+        >
           Remind all pending ({unreminded})
-        </button>
+        </GatedAction>
         <span className="sa-toolbar-meta">
           {rows.length} of {allExpiries.length} records
         </span>
@@ -73,7 +92,11 @@ export default function ExpirySection({ rows, filter, onFilterChange, onRemind, 
               {rows.map((row) => {
                 const status = expiryStatus(row)
                 return (
-                  <tr key={row.id}>
+                  <tr
+                    key={row.id}
+                    ref={row.id === focusId ? focusedRowRef : undefined}
+                    className={row.id === focusId ? 'sa-row-selected' : undefined}
+                  >
                     <td className="sa-cell-strong">
                       {row.subject}
                       <span className="sa-cell-sub">
@@ -93,15 +116,16 @@ export default function ExpirySection({ rows, filter, onFilterChange, onRemind, 
                       {row.reminded ? (
                         <span className="sa-approval-meta">Reminded</span>
                       ) : (
-                        <button
-                          type="button"
+                        <GatedAction
+                          check={check}
+                          permission="expiry.remind"
                           className="sa-btn-ghost"
                           onClick={() => onRemind(row.id)}
                           disabled={row.daysLeft > 7}
                           title={row.daysLeft > 7 ? 'Reminders start 7 days before expiry' : 'Send reminder'}
                         >
                           Send reminder
-                        </button>
+                        </GatedAction>
                       )}
                     </td>
                   </tr>

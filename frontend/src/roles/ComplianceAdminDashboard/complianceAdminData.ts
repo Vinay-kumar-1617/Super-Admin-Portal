@@ -3,6 +3,12 @@ import { emailForRole } from '../../auth/roleAccounts'
 
 export type SectionId =
   | 'overview'
+  | 'notifications'
+  | 'vehicles'
+  | 'drivers'
+  | 'violations'
+  | 'actions'
+  | 'audits'
   | 'documents'
   | 'permits'
   | 'inspections'
@@ -10,6 +16,7 @@ export type SectionId =
   | 'expiries'
   | 'escalations'
   | 'reports'
+  | 'rules'
 
 export type DocSubjectType = 'Driver' | 'Vehicle' | 'Owner' | 'Fleet Partner'
 export type DocStatus = 'Pending' | 'Renewed' | 'Verified' | 'Rejected'
@@ -112,16 +119,6 @@ export type AuditEntry = {
   actor: string
   action: string
   detail: string
-}
-
-export type ComplianceNotification = {
-  id: string
-  title: string
-  detail: string
-  time: string
-  tone: 'green' | 'amber' | 'red' | 'blue'
-  read: boolean
-  target: string
 }
 
 export const complianceProfile = {
@@ -374,14 +371,6 @@ export const auditTrail: AuditEntry[] = [
   { id: 'AL-8', time: '2 days ago', actor: 'Nandita Verma', action: 'Sent expiry reminder', detail: 'EX-90 · Ashok Yadav driving licence' },
 ]
 
-export const complianceNotifications: ComplianceNotification[] = [
-  { id: 'cn-1', title: '11 documents awaiting verification', detail: 'Two renewed documents need re-verification before their expiry window closes.', time: '1 hour ago', tone: 'amber', read: false, target: 'documents' },
-  { id: 'cn-2', title: 'Two permits expired', detail: 'PMT-809 and PMT-805 lapsed — vehicles auto-flagged until renewal.', time: '3 hours ago', tone: 'red', read: false, target: 'permits' },
-  { id: 'cn-3', title: 'Two inspections overdue', detail: 'Quarterly safety checks crossed due dates in Hyderabad and Karimnagar.', time: '6 hours ago', tone: 'red', read: false, target: 'inspections' },
-  { id: 'cn-4', title: 'Incoming request from Hyderabad City Admin', detail: 'Second look requested on the Srinivas Reddy KYC pack.', time: '1 day ago', tone: 'blue', read: false, target: 'escalations' },
-  { id: 'cn-5', title: 'Weekly compliance digest ready', detail: 'Verification turnaround steady at 7 hours median across the state.', time: '2 days ago', tone: 'green', read: true, target: 'reports' },
-]
-
 export const suspendVehicleOptions = [
   { name: 'TS-07-HB-4412 · CAT 320 GC', city: 'Hyderabad' },
   { name: 'TS-09-MM-2287 · JCB 3CX', city: 'Hyderabad' },
@@ -404,12 +393,19 @@ export const buildComplianceAlerts = (
   docs: ComplianceDocument[],
   inspectionsDue: InspectionRow[],
   expiries: ExpiryRow[],
-): Array<{ id: string; severity: 'Critical' | 'Warning'; title: string; detail: string }> => [
+): Array<{
+  id: string
+  severity: 'Critical' | 'Warning'
+  category: 'Expiry' | 'Vehicle' | 'Document'
+  title: string
+  detail: string
+}> => [
   ...expiries
     .filter((row) => row.daysLeft <= 7)
     .map((row) => ({
       id: `alert-${row.id}`,
       severity: (row.daysLeft < 0 ? 'Critical' : 'Warning') as 'Critical' | 'Warning',
+      category: 'Expiry' as const,
       title:
         row.daysLeft < 0
           ? `Lapsed ${row.kind.toLowerCase()}: ${row.item}`
@@ -421,6 +417,7 @@ export const buildComplianceAlerts = (
     .map((row) => ({
       id: `alert-${row.id}`,
       severity: 'Critical' as const,
+      category: 'Vehicle' as const,
       title: `Overdue inspection: ${row.kind}`,
       detail: `${row.model} (${row.vehicle}) · was due ${row.dueOn} · ${row.assignedTo}`,
     })),
@@ -429,6 +426,7 @@ export const buildComplianceAlerts = (
     .map((doc) => ({
       id: `alert-${doc.id}`,
       severity: 'Warning' as const,
+      category: 'Document' as const,
       title: `Repeated rejections: ${doc.id}`,
       detail: `${doc.holder} · ${doc.kind} · rejected ${doc.rejections} times`,
     })),

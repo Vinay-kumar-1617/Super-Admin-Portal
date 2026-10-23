@@ -1,5 +1,6 @@
-import { StatusPill } from './shared'
+import { GatedAction, StatusPill } from './shared'
 import { permitRows as allPermits, type PermitRow, type PermitStatus } from './complianceAdminData'
+import type { ComplianceCheck } from './compliancePermissions'
 
 const statusFilterOptions: Array<'All' | PermitStatus> = ['All', 'Valid', 'Pending verification', 'Expiring', 'Expired', 'Missing']
 
@@ -13,6 +14,7 @@ type PermitsSectionProps = {
   onToggle: (id: string) => void
   onVerify: (id: string) => void
   onReset: () => void
+  check: ComplianceCheck
 }
 
 export default function PermitsSection({
@@ -25,6 +27,7 @@ export default function PermitsSection({
   onToggle,
   onVerify,
   onReset,
+  check,
 }: PermitsSectionProps) {
   const flagged = allPermits.filter((permit) => permit.status === 'Expired' || permit.status === 'Missing').length
 
@@ -99,6 +102,7 @@ export default function PermitsSection({
                     canVerify={canVerify}
                     onToggle={() => onToggle(permit.id)}
                     onVerify={() => onVerify(permit.id)}
+                    check={check}
                   />
                 )
               })}
@@ -116,12 +120,14 @@ function PermitRowView({
   canVerify,
   onToggle,
   onVerify,
+  check,
 }: {
   permit: PermitRow
   expanded: boolean
   canVerify: boolean
   onToggle: () => void
   onVerify: () => void
+  check: ComplianceCheck
 }) {
   return (
     <>
@@ -171,9 +177,9 @@ function PermitRowView({
               </div>
               <div className="cf-review-actions">
                 {canVerify ? (
-                  <button type="button" className="sa-btn approve" onClick={onVerify}>
+                  <GatedAction check={check} permission="permit.verify" className="sa-btn approve" onClick={onVerify}>
                     Verify permit
-                  </button>
+                  </GatedAction>
                 ) : (
                   <span className="sa-approval-meta">Verified as valid.</span>
                 )}

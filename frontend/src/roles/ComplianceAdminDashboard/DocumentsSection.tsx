@@ -1,5 +1,6 @@
-import { StatusPill } from './shared'
+import { GatedAction, StatusPill } from './shared'
 import { documents as allDocuments, type ComplianceDocument, type DocStatus, type DocSubjectType } from './complianceAdminData'
+import type { ComplianceCheck } from './compliancePermissions'
 
 const statusFilterOptions: Array<'All' | DocStatus> = ['All', 'Pending', 'Renewed', 'Verified', 'Rejected']
 const typeFilterOptions: Array<'All' | DocSubjectType> = ['All', 'Driver', 'Vehicle', 'Owner', 'Fleet Partner']
@@ -19,6 +20,7 @@ type DocumentsSectionProps = {
   onVerify: (id: string) => void
   onReject: (id: string) => void
   onReset: () => void
+  check: ComplianceCheck
 }
 
 export default function DocumentsSection({
@@ -36,6 +38,7 @@ export default function DocumentsSection({
   onVerify,
   onReject,
   onReset,
+  check,
 }: DocumentsSectionProps) {
   const awaiting = allDocuments.filter((doc) => doc.status === 'Pending' || doc.status === 'Renewed').length
 
@@ -122,6 +125,7 @@ export default function DocumentsSection({
                   onToggle={() => onToggle(doc.id)}
                   onVerify={() => onVerify(doc.id)}
                   onReject={() => onReject(doc.id)}
+                  check={check}
                 />
               ))}
             </tbody>
@@ -140,6 +144,7 @@ function DocumentRow({
   onToggle,
   onVerify,
   onReject,
+  check,
 }: {
   doc: ComplianceDocument
   expanded: boolean
@@ -148,6 +153,7 @@ function DocumentRow({
   onToggle: () => void
   onVerify: () => void
   onReject: () => void
+  check: ComplianceCheck
 }) {
   const awaitingAction = doc.status === 'Pending' || doc.status === 'Renewed'
 
@@ -204,18 +210,19 @@ function DocumentRow({
                     value={reason}
                     onChange={(event) => onReasonChange(event.target.value)}
                   />
-                  <button type="button" className="sa-btn approve" onClick={onVerify}>
+                  <GatedAction check={check} permission="document.verify" className="sa-btn approve" onClick={onVerify}>
                     Verify
-                  </button>
-                  <button
-                    type="button"
+                  </GatedAction>
+                  <GatedAction
+                    check={check}
+                    permission="document.reject"
                     className="sa-btn reject"
                     onClick={onReject}
                     disabled={reason.trim().length < 4}
                     title="A reason is required so the person can resubmit"
                   >
                     Reject with reason
-                  </button>
+                  </GatedAction>
                 </div>
               ) : (
                 <div className="cf-review-actions">

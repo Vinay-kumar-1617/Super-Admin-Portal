@@ -1,10 +1,12 @@
-import { StatusPill } from './shared'
+import { GatedAction, StatusPill } from './shared'
+import { useFocusRow } from './useRecordFocus'
 import {
   inspectionRows as allInspections,
   inspectionSchedules,
   type InspectionRow,
   type InspectionStatus,
 } from './complianceAdminData'
+import type { ComplianceCheck } from './compliancePermissions'
 
 const statusFilterOptions: Array<'All' | InspectionStatus> = [
   'All',
@@ -27,6 +29,8 @@ type InspectionsSectionProps = {
   onToggle: (id: string) => void
   onRecord: (id: string, result: 'Pass' | 'Fail' | 'Pass with conditions') => void
   onReset: () => void
+  focusId?: string
+  check: ComplianceCheck
 }
 
 export default function InspectionsSection({
@@ -41,6 +45,8 @@ export default function InspectionsSection({
   onToggle,
   onRecord,
   onReset,
+  focusId,
+  check,
 }: InspectionsSectionProps) {
   return (
     <>
@@ -137,11 +143,13 @@ export default function InspectionsSection({
                       key={row.id}
                       row={row}
                       expanded={expanded}
+                      focused={row.id === focusId}
                       canRecord={canRecord}
                       note={note}
                       onNoteChange={onNoteChange}
                       onToggle={() => onToggle(row.id)}
                       onRecord={onRecord}
+                      check={check}
                     />
                   )
                 })}
@@ -157,25 +165,33 @@ export default function InspectionsSection({
 function InspectionRowView({
   row,
   expanded,
+  focused,
   canRecord,
   note,
   onNoteChange,
   onToggle,
   onRecord,
+  check,
 }: {
   row: InspectionRow
   expanded: boolean
+  focused: boolean
   canRecord: boolean
   note: string
   onNoteChange: (value: string) => void
   onToggle: () => void
   onRecord: (id: string, result: 'Pass' | 'Fail' | 'Pass with conditions') => void
+  check: ComplianceCheck
 }) {
   const noteRequired = note.trim().length < 4
+  const focusedRowRef = useFocusRow(focused)
 
   return (
     <>
-      <tr className={expanded ? 'sa-row-selected' : ''}>
+      <tr
+        ref={focused ? focusedRowRef : undefined}
+        className={expanded || focused ? 'sa-row-selected' : undefined}
+      >
         <td className="sa-cell-strong">
           {row.id}
           <span className="sa-cell-sub">{row.kind}</span>
@@ -227,27 +243,34 @@ function InspectionRowView({
                     value={note}
                     onChange={(event) => onNoteChange(event.target.value)}
                   />
-                  <button type="button" className="sa-btn approve" onClick={() => onRecord(row.id, 'Pass')}>
+                  <GatedAction
+                    check={check}
+                    permission="inspection.record"
+                    className="sa-btn approve"
+                    onClick={() => onRecord(row.id, 'Pass')}
+                  >
                     Pass
-                  </button>
-                  <button
-                    type="button"
+                  </GatedAction>
+                  <GatedAction
+                    check={check}
+                    permission="inspection.record"
                     className="sa-btn reject"
                     onClick={() => onRecord(row.id, 'Fail')}
                     disabled={noteRequired}
                     title="A follow-up note is required for a failed inspection"
                   >
                     Fail + follow-up
-                  </button>
-                  <button
-                    type="button"
+                  </GatedAction>
+                  <GatedAction
+                    check={check}
+                    permission="inspection.record"
                     className="sa-btn"
                     onClick={() => onRecord(row.id, 'Pass with conditions')}
                     disabled={noteRequired}
                     title="A note describing the conditions is required"
                   >
                     Pass with conditions
-                  </button>
+                  </GatedAction>
                 </div>
               )}
             </div>

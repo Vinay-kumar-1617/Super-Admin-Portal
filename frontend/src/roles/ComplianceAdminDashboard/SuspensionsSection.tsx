@@ -1,10 +1,11 @@
-import { StatusPill } from './shared'
+import { GatedAction, StatusPill } from './shared'
 import {
   evidenceOptions,
   suspendDriverOptions,
   suspendVehicleOptions,
   type SuspensionRow,
 } from './complianceAdminData'
+import type { ComplianceCheck } from './compliancePermissions'
 
 type SuspensionsSectionProps = {
   rows: SuspensionRow[]
@@ -18,6 +19,7 @@ type SuspensionsSectionProps = {
   onEvidenceChange: (value: string) => void
   onSuspend: () => void
   onReinstate: (id: string) => void
+  check: ComplianceCheck
 }
 
 export default function SuspensionsSection({
@@ -32,6 +34,7 @@ export default function SuspensionsSection({
   onEvidenceChange,
   onSuspend,
   onReinstate,
+  check,
 }: SuspensionsSectionProps) {
   const subjectOptions = subjectType === 'Vehicle' ? suspendVehicleOptions : suspendDriverOptions
   const active = rows.filter((row) => row.status === 'Suspended').length
@@ -89,15 +92,16 @@ export default function SuspensionsSection({
             </select>
           </label>
 
-          <button
-            type="button"
+          <GatedAction
+            check={check}
+            permission={subjectType === 'Vehicle' ? 'vehicle.suspend' : 'driver.suspend'}
             className="sa-btn reject"
             onClick={onSuspend}
             disabled={!canSubmit}
             title="Reason (min 4 characters) and a backing record are required"
           >
             Suspend {subjectType.toLowerCase()}
-          </button>
+          </GatedAction>
         </div>
         {!canSubmit && (
           <div className="sa-toolbar">
@@ -146,9 +150,14 @@ export default function SuspensionsSection({
                   </td>
                   <td>
                     {row.status === 'Suspended' ? (
-                      <button type="button" className="sa-btn approve" onClick={() => onReinstate(row.id)}>
+                      <GatedAction
+                        check={check}
+                        permission="suspension.reinstate"
+                        className="sa-btn approve"
+                        onClick={() => onReinstate(row.id)}
+                      >
                         Reinstate
-                      </button>
+                      </GatedAction>
                     ) : (
                       <span className="sa-approval-meta">Reinstated {row.reinstatedOn}</span>
                     )}
