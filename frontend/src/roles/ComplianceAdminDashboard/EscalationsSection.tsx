@@ -1,10 +1,11 @@
-import { StatusPill } from './shared'
+import { GatedAction, StatusPill } from './shared'
 import {
   escalationRisks,
   escalationRows as allEscalations,
   escalationTargets,
   type EscalationRow,
 } from './complianceAdminData'
+import type { ComplianceCheck } from './compliancePermissions'
 
 type EscalationFilter = 'All' | 'Outgoing' | 'Incoming'
 const filterOptions: EscalationFilter[] = ['All', 'Outgoing', 'Incoming']
@@ -24,6 +25,7 @@ type EscalationsSectionProps = {
   onEscalate: () => void
   onAcknowledge: (id: string) => void
   onResolve: (id: string) => void
+  check: ComplianceCheck
 }
 
 export default function EscalationsSection({
@@ -41,6 +43,7 @@ export default function EscalationsSection({
   onEscalate,
   onAcknowledge,
   onResolve,
+  check,
 }: EscalationsSectionProps) {
   const openCount = allEscalations.filter((row) => row.status === 'Open').length
   const canEscalate = subject.trim().length > 0 && reason.trim().length >= 4
@@ -91,9 +94,9 @@ export default function EscalationsSection({
               onChange={(event) => onReasonChange(event.target.value)}
             />
           </label>
-          <button type="button" className="sa-btn reject" onClick={onEscalate} disabled={!canEscalate}>
+          <GatedAction check={check} permission="escalation.create" className="sa-btn reject" onClick={onEscalate} disabled={!canEscalate}>
             Escalate
-          </button>
+          </GatedAction>
         </div>
       </section>
 
@@ -150,14 +153,14 @@ export default function EscalationsSection({
                 </div>
                 <div className="sa-approval-actions">
                   {row.status === 'Open' && (
-                    <button type="button" className="sa-btn" onClick={() => onAcknowledge(row.id)}>
+                    <GatedAction check={check} permission="escalation.resolve" className="sa-btn" onClick={() => onAcknowledge(row.id)}>
                       Acknowledge
-                    </button>
+                    </GatedAction>
                   )}
                   {row.status !== 'Resolved' ? (
-                    <button type="button" className="sa-btn approve" onClick={() => onResolve(row.id)}>
+                    <GatedAction check={check} permission="escalation.resolve" className="sa-btn approve" onClick={() => onResolve(row.id)}>
                       Resolve
-                    </button>
+                    </GatedAction>
                   ) : (
                     <span className="sa-approval-meta">Closed</span>
                   )}
