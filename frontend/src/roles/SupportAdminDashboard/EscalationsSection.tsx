@@ -4,9 +4,11 @@ import type { NewEscalationInput } from './useSupportAdmin'
 import {
   categoryTargetMap,
   escalationCategories,
+  escalationTargets,
   type EscalationCategory,
   type EscalationStatus,
   type SupportEscalation,
+  type TicketPriority,
 } from './supportAdminData'
 
 type SupportEscalationsSectionProps = {
@@ -14,11 +16,12 @@ type SupportEscalationsSectionProps = {
   onCreate: (input: NewEscalationInput) => string
   onAcknowledge: (id: string) => void
   onResolve: (id: string) => void
+  onUpdate: (id: string, patch: Partial<Pick<SupportEscalation, 'priority' | 'target' | 'level' | 'slaDeadline' | 'progress' | 'resolutionNote'>>) => void
 }
 
 const statusFilters: Array<'All' | EscalationStatus> = ['All', 'Open', 'Acknowledged', 'Resolved']
 
-export default function EscalationsSection({ escalations, onCreate, onAcknowledge, onResolve }: SupportEscalationsSectionProps) {
+export default function EscalationsSection({ escalations, onCreate, onAcknowledge, onResolve, onUpdate }: SupportEscalationsSectionProps) {
   const [category, setCategory] = useState<EscalationCategory>('Dispute / damage')
   const [subject, setSubject] = useState('')
   const [ticket, setTicket] = useState('')
@@ -28,6 +31,8 @@ export default function EscalationsSection({ escalations, onCreate, onAcknowledg
 
   const rows = escalations.filter((item) => statusFilter === 'All' || item.status === statusFilter)
   const openCount = escalations.filter((item) => item.status === 'Open').length
+  const levels: SupportEscalation['level'][] = ['Level 1', 'Level 2', 'Level 3']
+  const priorities: TicketPriority[] = ['Urgent', 'High', 'Normal', 'Low']
 
   const submit = () => {
     if (subject.trim().length < 4) {
@@ -47,6 +52,17 @@ export default function EscalationsSection({ escalations, onCreate, onAcknowledg
 
   return (
     <>
+      <style>{`
+        .support-escalation-details { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+        .support-escalation-field { display: grid; gap: 5px; min-width: 0; }
+        .support-escalation-field > span { color: #586579; font-size: .68rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+        .support-escalation-progress { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+        .support-escalation-progress input { width: 100%; accent-color: var(--sa-brand); }
+        .support-escalation-note { width: 100%; min-height: 44px; resize: vertical; }
+        .support-escalation-note-wrap { grid-column: 1 / -1; }
+        @media (max-width: 950px) { .support-escalation-details { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 560px) { .support-escalation-details { grid-template-columns: minmax(0, 1fr); } .support-escalation-note-wrap { grid-column: auto; } }
+      `}</style>
       <section className="sa-panel">
         <div className="sa-panel-header">
           <h3>Raise an escalation</h3>
@@ -148,6 +164,72 @@ export default function EscalationsSection({ escalations, onCreate, onAcknowledg
                     Opened {item.opened}
                     {item.ticket !== '—' ? ` · ticket ${item.ticket}` : ''}
                   </span>
+                  <div className="support-escalation-details">
+                    <label className="support-escalation-field">
+                      <span>Priority</span>
+                      <select className="sa-select" value={item.priority} onChange={(event) => onUpdate(item.id, { priority: event.target.value as TicketPriority })}>
+                        {priorities.map((priority) => <option key={priority} value={priority}>{priority}</option>)}
+                      </select>
+                    </label>
+                    <label className="support-escalation-field">
+                      <span>Assigned team</span>
+                      <select className="sa-select" value={item.target} onChange={(event) => onUpdate(item.id, { target: event.target.value as SupportEscalation['target'] })}>
+                        {escalationTargets.map((target) => <option key={target} value={target}>{target}</option>)}
+                      </select>
+                    </label>
+                    <label className="support-escalation-field">
+                      <span>Escalation level</span>
+                      <select className="sa-select" value={item.level} onChange={(event) => onUpdate(item.id, { level: event.target.value as SupportEscalation['level'] })}>
+                        {levels.map((level) => <option key={level} value={level}>{level}</option>)}
+                      </select>
+                    </label>
+                    <label className="support-escalation-field">
+                      <span>SLA deadline</span>
+                      <input
+                        className="sa-input"
+                        aria-label={`SLA deadline for ${item.id}`}
+                        type="text"
+                        defaultValue={item.slaDeadline}
+                        onBlur={(event) => {
+                          if (event.currentTarget.value !== item.slaDeadline) onUpdate(item.id, { slaDeadline: event.currentTarget.value })
+                        }}
+                      />
+                    </label>
+                    <label className="support-escalation-field support-escalation-note-wrap">
+                      <span>Resolution progress · {item.progress}%</span>
+                      <div className="support-escalation-progress">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="5"
+                          aria-label={`Resolution progress for ${item.id}`}
+                          defaultValue={item.progress}
+                          onMouseUp={(event) => {
+                            const progress = Number(event.currentTarget.value)
+                            if (progress !== item.progress) onUpdate(item.id, { progress })
+                          }}
+                          onKeyUp={(event) => {
+                            const progress = Number(event.currentTarget.value)
+                            if (progress !== item.progress) onUpdate(item.id, { progress })
+                          }}
+                        />
+                        <strong>{item.progress}%</strong>
+                      </div>
+                    </label>
+                    <label className="support-escalation-field support-escalation-note-wrap">
+                      <span>Resolution note</span>
+                      <textarea
+                        className="sa-input support-escalation-note"
+                        aria-label={`Resolution note for ${item.id}`}
+                        defaultValue={item.resolutionNote}
+                        placeholder="Add progress or resolution details..."
+                        onBlur={(event) => {
+                          if (event.currentTarget.value !== item.resolutionNote) onUpdate(item.id, { resolutionNote: event.currentTarget.value })
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div className="sa-approval-actions">
                   {item.status === 'Open' && (

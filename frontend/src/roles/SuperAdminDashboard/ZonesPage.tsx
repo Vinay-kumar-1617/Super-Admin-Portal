@@ -1,12 +1,13 @@
 import { useState, useMemo, type Dispatch, type FormEvent, type SetStateAction } from 'react'
 import { statesPageStyles } from './pageStyles'
 import type { ZoneItem } from './zonesData'
-import { initialCitiesData } from './citiesData'
+import { initialCitiesData, type CityItem } from './citiesData'
 import type { BookingStatus, StateActivity, StateBooking } from './statesData'
 
 type ZonesPageProps = {
   zones: ZoneItem[]
   setZones: Dispatch<SetStateAction<ZoneItem[]>>
+  cities?: CityItem[]
   onBack?: () => void
   statusFilter: 'all' | 'active' | 'inactive'
   onStatusFilterChange: (filter: 'all' | 'active' | 'inactive') => void
@@ -18,6 +19,7 @@ type ZonesPageProps = {
 export default function ZonesPage({
   zones,
   setZones,
+  cities: citiesProp,
   onBack,
   statusFilter,
   onStatusFilterChange,
@@ -25,6 +27,7 @@ export default function ZonesPage({
   setIsAddModalOpen,
   initialSearchQuery,
 }: ZonesPageProps) {
+  const cities = citiesProp ?? initialCitiesData
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery ?? '')
   const [stateFilter, setStateFilter] = useState('all')
   const [cityFilter, setCityFilter] = useState('all')
@@ -32,8 +35,8 @@ export default function ZonesPage({
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   // Selected Zone for viewing details
-  const [viewZone, setViewCity] = useState<ZoneItem | null>(null)
-  const [editZone, setEditCity] = useState<ZoneItem | null>(null)
+  const [viewZone, setViewZone] = useState<ZoneItem | null>(null)
+  const [editZone, setEditZone] = useState<ZoneItem | null>(null)
 
   // Booking filters inside the selected Zone details page
   const [bookingSearch, setBookingSearch] = useState('')
@@ -49,7 +52,7 @@ export default function ZonesPage({
   const [addForm, setAddForm] = useState({
     name: '',
     code: '',
-    cityName: initialCitiesData[0]?.name ?? '',
+    cityName: cities[0]?.name ?? '',
     headquarters: '',
     adminName: '',
     adminEmail: '',
@@ -217,7 +220,7 @@ export default function ZonesPage({
 
   // Open zone details and reset sub-filters
   const handleOpenZoneDetails = (ct: ZoneItem) => {
-    setViewCity(ct)
+    setViewZone(ct)
     setBookingSearch('')
     setBookingDistrictFilter('all')
     setBookingZoneFilter('all')
@@ -245,7 +248,7 @@ export default function ZonesPage({
             status: nextStatus as 'Active' | 'Inactive',
             recentActivity: [updatedActivity, ...c.recentActivity],
           }
-          if (viewZone?.id === zone) setViewCity(updated)
+          if (viewZone?.id === zone) setViewZone(updated)
           showToast(`${c.name} is now ${nextStatus}.`)
           return updated
         }
@@ -271,7 +274,7 @@ export default function ZonesPage({
       status: item.status,
       region: item.region ?? '',
     })
-    setEditCity(item)
+    setEditZone(item)
   }
 
   // Submit Edit form
@@ -291,7 +294,7 @@ export default function ZonesPage({
             .map((d) => d.trim())
             .filter(Boolean)
 
-          const cityMeta = initialCitiesData.find((ct) => ct.name === editForm.cityName)
+          const cityMeta = cities.find((ct) => ct.name === editForm.cityName)
           const updated: ZoneItem = {
             ...c,
             name: editForm.name.trim(),
@@ -323,7 +326,7 @@ export default function ZonesPage({
               ...c.recentActivity,
             ],
           }
-          if (viewZone?.id === c.id) setViewCity(updated)
+          if (viewZone?.id === c.id) setViewZone(updated)
           return updated
         }
         return c
@@ -331,7 +334,7 @@ export default function ZonesPage({
     )
 
     showToast(`Zone "${editForm.name}" updated successfully.`)
-    setEditCity(null)
+    setEditZone(null)
   }
 
   // Submit Add Zone form
@@ -362,7 +365,7 @@ export default function ZonesPage({
       .filter(Boolean)
 
     const primaryDistrict = keyDistrictsList[0] || 'Central District'
-    const cityMeta = initialCitiesData.find((c) => c.name === addForm.cityName)
+    const cityMeta = cities.find((c) => c.name === addForm.cityName)
 
     const newZone: ZoneItem = {
       id: `zone-${codeUpper.toLowerCase()}-${Date.now()}`,
@@ -428,7 +431,7 @@ export default function ZonesPage({
     setAddForm({
       name: '',
       code: '',
-      cityName: initialCitiesData[0]?.name ?? '',
+      cityName: cities[0]?.name ?? '',
       headquarters: '',
       adminName: '',
       adminEmail: '',
@@ -470,7 +473,7 @@ export default function ZonesPage({
         .zones-clear-btn {
           border: 0;
           background: transparent;
-          color: #ef4a12;
+          color: var(--brand-orange);
           font-family: inherit;
           font-size: 0.78rem;
           font-weight: 800;
@@ -484,32 +487,27 @@ export default function ZonesPage({
       `}</style>
 
       {/* Breadcrumb & Header */}
-      <header className="states-header">
-        <div className="states-header-copy">
-          <div className="states-breadcrumb">
-            <button type="button" onClick={onBack}>Dashboard</button>
-            <span>/</span>
-            <span>Geography</span>
-            <span>/</span>
-            <strong>Zones Management</strong>
+      {!viewZone && (
+        <header className="states-header">
+          <div className="states-header-copy">
+            <div className="states-breadcrumb">
+              <button type="button" onClick={onBack}>Dashboard</button>
+            </div>
+            <h2>Zones & Jurisdictions</h2>
           </div>
-          <h2>Zones & Jurisdictions</h2>
-          <p>
-            Manage zone hubs, assign dedicated Zone Admins, monitor zones, districts, officers, and operational activity.
-          </p>
-        </div>
 
-        <div className="states-header-actions">
-          {onBack && (
-            <button type="button" className="btn-secondary" onClick={onBack}>
-              ← Back to Overview
+          <div className="states-header-actions">
+            {onBack && (
+              <button type="button" className="btn-secondary" onClick={onBack}>
+                ← Back to Overview
+              </button>
+            )}
+            <button type="button" className="btn-primary geo-add-action" onClick={() => setIsAddModalOpen(true)}>
+              <span>+</span> Add Zone
             </button>
-          )}
-          <button type="button" className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
-            <span>+</span> Add Zone
-          </button>
-        </div>
-      </header>
+          </div>
+        </header>
+      )}
 
       {!viewZone && (
         <>
@@ -802,36 +800,39 @@ export default function ZonesPage({
                           <div className="table-actions-cell">
                             <button
                               type="button"
-                              className="action-btn view"
+                              className="action-btn view icon-action"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleOpenZoneDetails(ct)
                               }}
                               aria-label={`View details for ${ct.name}`}
+                              title="View zone"
                             >
-                              View Zone
+                              👁️
                             </button>
                             <button
                               type="button"
-                              className="action-btn edit"
+                              className="action-btn edit icon-action"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 openEditModal(ct)
                               }}
                               aria-label={`Edit ${ct.name}`}
+                              title="Edit zone"
                             >
-                              Edit
+                              ✏️
                             </button>
                             <button
                               type="button"
-                              className={`action-btn ${ct.status === 'Active' ? 'toggle-deactivate' : 'toggle-activate'}`}
+                              className={`action-btn icon-action ${ct.status === 'Active' ? 'toggle-deactivate' : 'toggle-activate'}`}
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleToggleStatus(ct.id)
                               }}
                               aria-label={`${ct.status === 'Active' ? 'Deactivate' : 'Activate'} ${ct.name}`}
+                              title={ct.status === 'Active' ? 'Deactivate zone' : 'Activate zone'}
                             >
-                              {ct.status === 'Active' ? 'Deactivate' : 'Activate'}
+                              {ct.status === 'Active' ? '🚫' : '✅'}
                             </button>
                           </div>
                         </td>
@@ -877,13 +878,13 @@ export default function ZonesPage({
       {/* CITY DETAILS PAGE (DYNAMICALLY DRIVEN BY SELECTED CITY) */}
       {viewZone && (
         <section
-          style={{ display: 'grid', gap: 16, marginTop: 16 }}
+          style={{ display: 'grid', gap: 16 }}
           aria-labelledby="view-zone-title"
         >
           <div className="states-header">
             <div className="states-header-copy">
               <div className="states-breadcrumb">
-                <button type="button" onClick={() => setViewCity(null)}>
+                <button type="button" onClick={() => setViewZone(null)}>
                   Zones
                 </button>
                 <span>›</span>
@@ -922,7 +923,7 @@ export default function ZonesPage({
               >
                 Edit Zone
               </button>
-              <button type="button" className="btn-primary" onClick={() => setViewCity(null)}>
+              <button type="button" className="btn-primary" onClick={() => setViewZone(null)}>
                 Back to Zones
               </button>
             </div>
@@ -1350,7 +1351,7 @@ export default function ZonesPage({
         <div
           className="modal-overlay"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setEditCity(null)
+            if (e.target === e.currentTarget) setEditZone(null)
           }}
           role="dialog"
           aria-modal="true"
@@ -1361,7 +1362,7 @@ export default function ZonesPage({
               <div className="modal-header-info">
                 <h3 id="edit-zone-title">Edit Zone — {editZone.name}</h3>
               </div>
-              <button type="button" className="modal-close-btn" onClick={() => setEditCity(null)} aria-label="Close edit form">
+              <button type="button" className="modal-close-btn" onClick={() => setEditZone(null)} aria-label="Close edit form">
                 ×
               </button>
             </header>
@@ -1400,7 +1401,7 @@ export default function ZonesPage({
                       value={editForm.cityName}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, cityName: e.target.value }))}
                     >
-                      {initialCitiesData.map((c) => (
+                      {cities.map((c) => (
                         <option key={c.id} value={c.name}>
                           {c.name}, {c.stateName}
                         </option>
@@ -1515,7 +1516,7 @@ export default function ZonesPage({
               </div>
 
               <footer className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setEditCity(null)}>
+                <button type="button" className="btn-secondary" onClick={() => setEditZone(null)}>
                   Cancel
                 </button>
                 <button type="submit" className="btn-primary">
@@ -1587,7 +1588,7 @@ export default function ZonesPage({
                       value={addForm.cityName}
                       onChange={(e) => setAddForm((prev) => ({ ...prev, cityName: e.target.value }))}
                     >
-                      {initialCitiesData.map((c) => (
+                      {cities.map((c) => (
                         <option key={c.id} value={c.name}>
                           {c.name}, {c.stateName}
                         </option>
@@ -1705,7 +1706,7 @@ export default function ZonesPage({
                 <button type="button" className="btn-secondary" onClick={() => setIsAddModalOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary">
+                <button type="submit" className="btn-primary geo-add-action">
                   Add Zone
                 </button>
               </footer>

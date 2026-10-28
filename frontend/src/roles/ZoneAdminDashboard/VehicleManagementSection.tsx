@@ -14,6 +14,35 @@ const statusTone: Record<VehicleStatus, string> = {
 const documentTone = (status: 'Valid' | 'Expiring' | 'Expired') =>
   status === 'Valid' ? 'green' : status === 'Expiring' ? 'amber' : 'red'
 
+const vehicleManagementColors = `
+  .vehicle-management-section {
+    --sa-brand: #ff6b2c;
+    --sa-brand-deep: #ef4a12;
+    --sa-green: #08a66c;
+    --sa-green-soft: rgba(8, 166, 108, .12);
+    --sa-blue: #2563eb;
+    --sa-blue-soft: rgba(37, 99, 235, .12);
+    --sa-purple: #7c3aed;
+    --sa-purple-soft: rgba(124, 58, 237, .12);
+    --sa-orange: #ff6b2c;
+    --sa-orange-soft: rgba(255, 107, 44, .15);
+    --sa-red: #ef4444;
+    --sa-red-soft: rgba(239, 68, 68, .13);
+  }
+
+  .vehicle-management-section .sa-stat-card.tone-brand .sa-stat-value,
+  .vehicle-management-section .sa-stat-card.tone-amber .sa-stat-value { color: #c94310; }
+  .vehicle-management-section .sa-stat-card.tone-green .sa-stat-value { color: #078653; }
+  .vehicle-management-section .sa-stat-card.tone-blue .sa-stat-value { color: #1d4ed8; }
+  .vehicle-management-section .sa-stat-card.tone-purple .sa-stat-value { color: #6d28d9; }
+  .vehicle-management-section .sa-stat-card.tone-red .sa-stat-value { color: #dc2626; }
+  .vehicle-management-section .sa-stat-card.tone-slate .sa-stat-value { color: #64748b; }
+  .vehicle-management-section .sa-pill.amber {
+    background: rgba(255, 107, 44, .15);
+    color: #c94310;
+  }
+`
+
 type VehicleManagementSectionProps = {
   onToast?: (message: string) => void
   vehicles?: Vehicle[]
@@ -94,7 +123,8 @@ export default function VehicleManagementSection({ onToast, vehicles: initialVeh
   }
 
   return (
-    <section className="sa-panel finance-panel">
+    <section className="sa-panel finance-panel vehicle-management-section">
+      <style>{vehicleManagementColors}</style>
       <div className="sa-panel-header">
         <div>
           <h3>Vehicle management</h3>

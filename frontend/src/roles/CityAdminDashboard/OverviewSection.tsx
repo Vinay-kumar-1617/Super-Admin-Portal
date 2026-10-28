@@ -47,14 +47,68 @@ export default function OverviewSection({ approvalCounts, onOpenApprovals, onNav
         ))}
       </div>
 
-      <div className="sa-attention">
-        {attentionCards.map((card) => (
-          <button key={card.type} type="button" className="sa-attention-card" onClick={() => onOpenApprovals(card.type)}>
-            <span className="sa-attention-label">{card.label}</span>
-            <span className="sa-attention-value">{String(approvalCounts[card.type]).padStart(2, '0')}</span>
-          </button>
-        ))}
-      </div>
+      <section className="ca-action-section">
+        <style>{`
+          .ca-action-section { display: grid; gap: 10px; }
+          .ca-action-header { display: flex; align-items: baseline; justify-content: space-between; }
+          .ca-action-title { margin: 0; font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; }
+          .ca-action-sub { font-size: 0.76rem; color: var(--sa-muted, #8a96a6); }
+          .ca-action-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+          .ca-action-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border: 1px solid var(--sa-line, rgba(15,23,42,0.08));
+            background: var(--sa-card-bg, #fff);
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 10px 24px rgba(15,23,42,0.04);
+            text-align: left;
+            font: inherit;
+            cursor: pointer;
+            transition: all 0.18s ease;
+          }
+          .ca-action-card:hover {
+            border-color: rgba(255,107,44,0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(15,23,42,0.06);
+          }
+          .ca-action-left { display: grid; gap: 2px; }
+          .ca-action-label { font-size: 0.9rem; font-weight: 700; }
+          .ca-action-meta { font-size: 0.74rem; color: var(--sa-muted, #8a96a6); }
+          .ca-action-count {
+            min-width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            background: rgba(255,107,44,0.12);
+            color: var(--sa-brand-deep, #ef4a12);
+            font-weight: 800;
+            font-size: 0.9rem;
+          }
+          @media (max-width: 1100px) { .ca-action-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+        `}</style>
+        <div className="ca-action-header">
+          <h2 className="ca-action-title">Action required</h2>
+          <span className="ca-action-sub">Pending approvals in {cityProfile.name}</span>
+        </div>
+        <div className="ca-action-grid">
+          {attentionCards.map((card) => {
+            const count = approvalCounts[card.type]
+            return (
+              <button key={card.type} type="button" className="ca-action-card" onClick={() => onOpenApprovals(card.type)}>
+                <div className="ca-action-left">
+                  <span className="ca-action-label">{card.label}</span>
+                  <span className="ca-action-meta">Review and take action</span>
+                </div>
+                <span className="ca-action-count">{count}</span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
 
       <div className="sa-analytics-grid">
         <section className="sa-panel">

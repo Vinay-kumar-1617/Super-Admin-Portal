@@ -1,25 +1,11 @@
 import { useState } from 'react'
-
-export const gstSections = [
-  'GST Settings',
-  'Owner GST Details',
-  'Tax Configuration',
-  'Invoices & Billing',
-  'Reports & Compliance',
-  'GST Audit Logs',
-] as const
-
-export type GstSection = (typeof gstSections)[number]
+import { gstSections, type GstSection } from './gstSections'
 
 type GstManagementPageProps = {
   section: GstSection | 'all'
   onNavigate: (section: GstSection) => void
   onBack: () => void
 }
-
-const showAll = (section: GstManagementPageProps['section']) => section === 'all'
-
-const sectionNumber = (item: GstSection) => String(gstSections.indexOf(item) + 1)
 
 const ownerGstRows = [
   { id: 'OGST-001', owner: 'Deccan Heavy Machinery', gstin: '36AAJCT1234F1Z5', state: 'Telangana', type: 'Registered', status: 'Verified', verifiedOn: '18 Jun 2026' },
@@ -76,6 +62,7 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
   const [ownerStatusFilter, setOwnerStatusFilter] = useState<string>('All')
   const [ownerTypeFilter, setOwnerTypeFilter] = useState<string>('All')
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>('All')
+  const activeSection: GstSection = section === 'all' ? 'GST Settings' : section
 
   const filteredOwners = ownerGstRows.filter(
     (row) =>
@@ -101,7 +88,6 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
       <>
         <span className="gst-card-top"><span className="gst-card-icon">{icon}</span><span>{label}</span></span>
         <strong>{value}</strong>
-        <small>GST sample data</small>
       </>
     )
 
@@ -131,31 +117,11 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
           gap: 8px;
         }
 
-        .gst-all-intro {
-          margin: 0;
-          color: var(--muted);
-          font-size: 0.8rem;
-        }
-
         .gst-section-heading {
-          display: flex;
-          align-items: center;
-          gap: 10px;
           margin: 0;
           font-size: 1rem;
           letter-spacing: -0.01em;
           color: var(--text);
-        }
-        .gst-section-no {
-          display: inline-grid;
-          place-items: center;
-          width: 24px;
-          height: 24px;
-          border-radius: 8px;
-          font-size: 0.74rem;
-          font-weight: 800;
-          background: linear-gradient(135deg, var(--brand-orange), var(--brand-orange-deep));
-          color: #fff;
         }
 
         .gst-tab {
@@ -272,10 +238,10 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
           font: inherit;
           font-size: 0.78rem;
           font-weight: 700;
-          color: #2563eb;
+          color: var(--brand-orange);
           cursor: pointer;
         }
-        .kpi-detail-back:hover { color: #1d4ed8; text-decoration: underline; }
+        .kpi-detail-back:hover { color: #c94310; text-decoration: underline; }
 
         .operator-record-details {
           max-width: 280px;
@@ -300,9 +266,9 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
           <button type="button" className="kpi-detail-back" onClick={onBack}>
             <span aria-hidden="true">←</span> Dashboard overview
           </button>
-          <p className="header-kicker">Finance / GST Management</p>
-          <h1 className="header-title">{section === 'all' ? 'GST Management' : section}</h1>
-          <div className="header-breadcrumb">GST Management / {section === 'all' ? 'All features' : section}</div>
+          
+          <h1 className="header-title">{activeSection}</h1>
+          
         </div>
         <span className="chip active">GSTIN verified</span>
       </header>
@@ -312,8 +278,8 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
           <button
             key={item}
             type="button"
-            className={`gst-tab ${section === item ? 'active' : ''}`}
-            aria-current={section === item ? 'location' : undefined}
+            className={`gst-tab ${activeSection === item ? 'active' : ''}`}
+            aria-current={activeSection === item ? 'location' : undefined}
             onClick={() => onNavigate(item)}
           >
             {item}
@@ -321,13 +287,9 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
         ))}
       </nav>
 
-      {section === 'all' && (
-        <p className="gst-all-intro">All GST management features in one view. Use the tabs above to jump to an individual feature.</p>
-      )}
-
-      {(section === 'GST Settings' || showAll(section)) && (
+      {activeSection === 'GST Settings' && (
         <>
-          <h2 className="gst-section-heading"><span className="gst-section-no">{sectionNumber('GST Settings')}</span> GST Settings</h2>
+          <h2 className="gst-section-heading">GST Settings</h2>
           <section className="panel">
             <div className="panel-header">
               <div>
@@ -367,9 +329,9 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
         </>
       )}
 
-      {(section === 'Owner GST Details' || showAll(section)) && (
+      {activeSection === 'Owner GST Details' && (
         <>
-          <h2 className="gst-section-heading"><span className="gst-section-no">{sectionNumber('Owner GST Details')}</span> Owner GST Details</h2>
+          <h2 className="gst-section-heading">Owner GST Details</h2>
           <div className="gst-summary-grid gst-summary-three">
             {gstCard('▤', 'Total owners', String(typeScopedOwners.length), 'accent-slate', {
               onClick: () => setOwnerStatusFilter('All'),
@@ -430,14 +392,13 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
                 </tbody>
               </table>
             </div>
-            <p className="gst-note">Illustrative owner GST records for interface preview; GSTIN values are sample identifiers.</p>
           </section>
         </>
       )}
 
-      {(section === 'Tax Configuration' || showAll(section)) && (
+      {activeSection === 'Tax Configuration' && (
         <>
-          <h2 className="gst-section-heading"><span className="gst-section-no">{sectionNumber('Tax Configuration')}</span> Tax Configuration</h2>
+          <h2 className="gst-section-heading">Tax Configuration</h2>
           <section className="panel">
             <div className="panel-header">
               <div>
@@ -514,9 +475,9 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
         </>
       )}
 
-      {(section === 'Invoices & Billing' || showAll(section)) && (
+      {activeSection === 'Invoices & Billing' && (
         <>
-          <h2 className="gst-section-heading"><span className="gst-section-no">{sectionNumber('Invoices & Billing')}</span> Invoices & Billing</h2>
+          <h2 className="gst-section-heading">Invoices & Billing</h2>
           <div className="gst-summary-grid">
             {gstCard('▤', 'Invoices raised', String(invoices.length), 'accent-slate')}
             {gstCard('₹', 'Net taxable value', `₹${totalInvoiced.toLocaleString('en-IN')}`, 'accent-blue')}
@@ -565,14 +526,13 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
                 </tbody>
               </table>
             </div>
-            <p className="gst-note">Illustrative invoice records for interface preview; amounts are sample data.</p>
           </section>
         </>
       )}
 
-      {(section === 'Reports & Compliance' || showAll(section)) && (
+      {activeSection === 'Reports & Compliance' && (
         <>
-          <h2 className="gst-section-heading"><span className="gst-section-no">{sectionNumber('Reports & Compliance')}</span> Reports & Compliance</h2>
+          <h2 className="gst-section-heading">Reports & Compliance</h2>
           <div className="gst-summary-grid gst-summary-three">
             {gstCard('▤', 'GSTR-1 · Sep 2026', 'Due 11 Oct', 'accent-orange')}
             {gstCard('◈', 'GSTR-3B · Sep 2026', 'Due 20 Oct', 'accent-blue')}
@@ -604,14 +564,14 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
                 </tbody>
               </table>
             </div>
-            <p className="gst-note">Filing dates are illustrative and follow standard GST return due dates in India.</p>
+            <p className="gst-note">Filing dates follow standard GST return due dates in India.</p>
           </section>
         </>
       )}
 
-      {(section === 'GST Audit Logs' || showAll(section)) && (
+      {activeSection === 'GST Audit Logs' && (
         <>
-          <h2 className="gst-section-heading"><span className="gst-section-no">{sectionNumber('GST Audit Logs')}</span> GST Audit Logs</h2>
+          <h2 className="gst-section-heading">GST Audit Logs</h2>
           <div className="gst-summary-grid gst-summary-three">
             {gstCard('▤', 'Total events', String(gstAuditEvents.length), 'accent-slate')}
             {gstCard('✓', 'This week', '3', 'accent-green')}
@@ -642,7 +602,6 @@ export default function GstManagementPage({ section, onNavigate, onBack }: GstMa
                 </tbody>
               </table>
             </div>
-            <p className="gst-note">Illustrative audit log for interface preview; entries are sample events.</p>
           </section>
         </>
       )}

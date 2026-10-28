@@ -23,6 +23,7 @@ type AttentionDetailPageProps = {
 }
 
 type StatCard = {
+  key: string
   label: string
   value: string
   badge: string
@@ -165,6 +166,9 @@ export default function AttentionDetailPage({
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [activity, setActivity] = useState<string[]>([])
   const [assignSelections, setAssignSelections] = useState<Record<string, string>>({})
+  const [selectedStatBySlug, setSelectedStatBySlug] = useState<Partial<Record<AttentionSlug, string>>>({})
+  const selectedStat = selectedStatBySlug[slug] ?? 'all'
+  const selectStat = (key: string) => setSelectedStatBySlug((current) => ({ ...current, [slug]: key }))
 
   const notify = (message: string) => {
     setToastMessage(message)
@@ -190,31 +194,44 @@ export default function AttentionDetailPage({
   const stats: StatCard[] =
     slug === 'payouts-awaiting-approval'
       ? [
-          { label: 'Pending approvals', value: String(payouts.length), badge: 'Finance', tone: 'orange' },
-          { label: 'Total value', value: formatRupees(pendingPayoutValue), badge: 'On hold', tone: 'slate' },
-          { label: 'Bank transfers', value: String(bankPayouts), badge: 'NEFT / IMPS', tone: 'blue' },
-          { label: 'UPI requests', value: String(payouts.length - bankPayouts), badge: 'Instant', tone: 'green' },
+          { key: 'all', label: 'Pending approvals', value: String(payouts.length), badge: 'Finance', tone: 'orange' },
+          { key: 'value', label: 'Total value', value: formatRupees(pendingPayoutValue), badge: 'Sort by amount', tone: 'slate' },
+          { key: 'bank', label: 'Bank transfers', value: String(bankPayouts), badge: 'NEFT / IMPS', tone: 'blue' },
+          { key: 'upi', label: 'UPI requests', value: String(payouts.length - bankPayouts), badge: 'Instant', tone: 'green' },
         ]
       : slug === 'security-alerts'
         ? [
-            { label: 'Open alerts', value: String(alerts.length), badge: 'Unresolved', tone: 'orange' },
-            { label: 'Critical', value: String(criticalAlerts), badge: 'Escalate', tone: 'slate' },
-            { label: 'High', value: String(highAlerts), badge: 'Investigate', tone: 'blue' },
-            { label: 'Medium', value: String(alerts.length - criticalAlerts - highAlerts), badge: 'Monitor', tone: 'green' },
+            { key: 'all', label: 'Open alerts', value: String(alerts.length), badge: 'Unresolved', tone: 'orange' },
+            { key: 'Critical', label: 'Critical', value: String(criticalAlerts), badge: 'Escalate', tone: 'slate' },
+            { key: 'High', label: 'High', value: String(highAlerts), badge: 'Investigate', tone: 'blue' },
+            { key: 'Medium', label: 'Medium', value: String(alerts.length - criticalAlerts - highAlerts), badge: 'Monitor', tone: 'green' },
           ]
         : slug === 'unassigned-jobs'
           ? [
-              { label: 'Waiting for operator', value: String(jobs.length), badge: 'Dispatch', tone: 'orange' },
-              { label: 'Due today', value: String(dueTodayJobs), badge: 'Urgent', tone: 'slate' },
-              { label: 'Cities affected', value: String(jobCities), badge: 'National', tone: 'blue' },
-              { label: 'Equipment types', value: String(new Set(jobs.map((item) => item.equipment)).size), badge: 'Mixed fleet', tone: 'green' },
+              { key: 'all', label: 'Waiting for operator', value: String(jobs.length), badge: 'Dispatch', tone: 'orange' },
+              { key: 'today', label: 'Due today', value: String(dueTodayJobs), badge: 'Urgent', tone: 'slate' },
+              { key: 'city', label: 'Cities affected', value: String(jobCities), badge: 'Group by city', tone: 'blue' },
+              { key: 'equipment', label: 'Equipment types', value: String(new Set(jobs.map((item) => item.equipment)).size), badge: 'Group by equipment', tone: 'green' },
             ]
           : [
-              { label: 'Pending reviews', value: String(kycs.length), badge: 'Verification', tone: 'orange' },
-              { label: 'Owners', value: String(kycOwners), badge: 'Hosts', tone: 'slate' },
-              { label: 'Operators', value: String(kycOperators), badge: 'Drivers', tone: 'blue' },
-              { label: 'Fleet partners', value: String(kycFleet), badge: 'Business', tone: 'green' },
+              { key: 'all', label: 'Pending reviews', value: String(kycs.length), badge: 'Verification', tone: 'orange' },
+              { key: 'Owner', label: 'Owners', value: String(kycOwners), badge: 'Hosts', tone: 'slate' },
+              { key: 'Operator', label: 'Operators', value: String(kycOperators), badge: 'Drivers', tone: 'blue' },
+              { key: 'Fleet Partner', label: 'Fleet partners', value: String(kycFleet), badge: 'Business', tone: 'green' },
             ]
+
+  const visiblePayouts = [...payouts]
+    .filter((item) => selectedStat === 'all' || selectedStat === 'value' || (selectedStat === 'bank' ? item.method === 'Bank transfer' : item.method === 'UPI'))
+    .sort((a, b) => selectedStat === 'value' ? b.amount - a.amount : 0)
+  const visibleAlerts = alerts.filter((item) => selectedStat === 'all' || item.severity === selectedStat)
+  const visibleJobs = [...jobs]
+    .filter((item) => selectedStat !== 'today' || item.requestedFor.startsWith('Today'))
+    .sort((a, b) => selectedStat === 'city'
+      ? a.city.localeCompare(b.city)
+      : selectedStat === 'equipment'
+        ? a.equipment.localeCompare(b.equipment)
+        : 0)
+  const visibleKycs = kycs.filter((item) => selectedStat === 'all' || item.type === selectedStat)
 
   const isEmpty =
     (slug === 'payouts-awaiting-approval' && payouts.length === 0) ||
@@ -231,13 +248,9 @@ export default function AttentionDetailPage({
         <div className="states-header-copy">
           <div className="states-breadcrumb">
             <button type="button" onClick={onBack}>Dashboard</button>
-            <span>/</span>
-            <span>Operations</span>
-            <span>/</span>
-            <strong>{meta.title}</strong>
           </div>
           <h2>{meta.title}</h2>
-          <p>{meta.description}</p>
+          {meta.description && <p>{meta.description}</p>}
         </div>
         <div className="states-header-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>
@@ -248,13 +261,19 @@ export default function AttentionDetailPage({
 
       <section className="states-stats-grid" aria-label={`${meta.title} summary statistics`}>
         {stats.map((stat) => (
-          <div className="states-stat-card" key={stat.label}>
+          <button
+            type="button"
+            className={`states-stat-card interactive${selectedStat === stat.key ? ' selected' : ''}`}
+            key={stat.label}
+            aria-pressed={selectedStat === stat.key}
+            onClick={() => selectStat(stat.key)}
+          >
             <div className="states-stat-info">
               <span className="states-stat-label">{stat.label}</span>
               <span className="states-stat-value">{stat.value}</span>
             </div>
             <span className={`states-stat-badge ${stat.tone}`}>{stat.badge}</span>
-          </div>
+          </button>
         ))}
       </section>
 
@@ -289,7 +308,9 @@ export default function AttentionDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {payouts.map((payout) => (
+                    {visiblePayouts.length === 0 ? (
+                      <tr><td colSpan={7} className="attn-cell-muted">No payout requests match this selection.</td></tr>
+                    ) : visiblePayouts.map((payout) => (
                       <tr key={payout.id}>
                         <td>
                           <span className="state-code-badge">{payout.id}</span>
@@ -354,7 +375,9 @@ export default function AttentionDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {alerts.map((alert) => (
+                    {visibleAlerts.length === 0 ? (
+                      <tr><td colSpan={7} className="attn-cell-muted">No alerts match this severity.</td></tr>
+                    ) : visibleAlerts.map((alert) => (
                       <tr key={alert.id}>
                         <td>
                           <span className="state-code-badge">{alert.id}</span>
@@ -421,7 +444,9 @@ export default function AttentionDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {jobs.map((job) => {
+                    {visibleJobs.length === 0 ? (
+                      <tr><td colSpan={7} className="attn-cell-muted">No jobs match this selection.</td></tr>
+                    ) : visibleJobs.map((job) => {
                       const selectedOperator = assignSelections[job.id] ?? ''
                       return (
                         <tr key={job.id}>
@@ -491,7 +516,9 @@ export default function AttentionDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {kycs.map((kyc) => (
+                    {visibleKycs.length === 0 ? (
+                      <tr><td colSpan={7} className="attn-cell-muted">No reviews match this applicant type.</td></tr>
+                    ) : visibleKycs.map((kyc) => (
                       <tr key={kyc.id}>
                         <td>
                           <span className="state-code-badge">{kyc.id}</span>

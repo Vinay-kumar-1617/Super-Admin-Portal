@@ -1,24 +1,27 @@
 import { Fragment, useEffect, useMemo, useState, type FormEvent } from 'react'
 import BookingLedgerPage from './BookingLedgerPage'
 import KpiDetailPage from './KpiDetailPage'
-import UsersPage from './UsersPage'
-import ApprovalLimitsPage from './ApprovalLimitsPage'
-import SessionsDevicesPage from './SessionsDevicesPage'
-import RolesPermissionsPage from './RolesPermissionsPage'
+import AccessManagementPage from './AccessManagementPage'
+import { accessSections, type AccessSection } from './accessManagementSections'
 import AuditLogPage from './AuditLogPage'
 import { initialStaff, type StaffAccount } from './staffData'
 import StatesPage from './StatesPage'
 import CitiesPage from './CitiesPage'
 import ZonesPage from './ZonesPage'
 import ServiceAreasPage from './ServiceAreasPage'
-import RulesEnginePage from './RulesEnginePage'
+import RulesEnginePage, { type RulesPageSection } from './RulesEnginePage'
 import AttentionDetailPage from './AttentionDetailPage'
 import FeatureFlagsPage from './FeatureFlagsPage'
-import GstManagementPage, { gstSections, type GstSection } from './GstManagementPage'
-import DocumentManagementPage, { documentSections, type DocumentSection } from './DocumentManagementPage'
+import HelpDocsPage from './HelpDocsPage'
+import GstManagementPage from './GstManagementPage'
+import { gstSections, type GstSection } from './gstSections'
+import DocumentManagementPage from './DocumentManagementPage'
+import { documentSections, type DocumentSection } from './documentSections'
 import RefundManagementPage from './RefundManagementPage'
+import FinancePage from './FinancePage'
 import SupportTicketsPage from './SupportTicketsPage'
 import NotificationsPage from './NotificationsPage'
+import { emailForRole } from '../../auth/roleAccounts'
 import { initialCitiesData, type CityItem } from './citiesData'
 import { initialZonesData, type ZoneItem } from './zonesData'
 import { initialServiceAreasData, type ServiceAreaItem } from './serviceAreasData'
@@ -40,7 +43,6 @@ import {
   type UnassignedJob,
 } from './attentionData'
 import {
-  dashboardPeriods,
   initialDashboardAlerts,
   initialNotifications,
   type DashboardAlert,
@@ -52,7 +54,6 @@ import {
   formatBookingCurrency,
   formatDateLabel,
   getBookingsForDate,
-  getRecentDateOptions,
   summarizeBookings,
   toIsoDate,
 } from './bookingDateData'
@@ -255,17 +256,13 @@ const organizationSeed: OrgLocation[] = [
 ]
 
 const sidebarPageGroup: Record<string, number> = {
+  Finance: 3,
   States: 0,
   Cities: 0,
   Zones: 0,
   'Service Areas': 0,
-  Users: 1,
-  'Roles & Permissions': 1,
-  'Approval Limits': 1,
-  'Sessions & Devices': 11,
-  'Global Rules': 2,
-  'Booking Rules': 2,
-  Pricing: 3,
+  'Users & Access': 1,
+  Rules: 2,
   'Feature Flags': 2,
   'Audit Log': 2,
   'GST Settings': 3,
@@ -290,6 +287,43 @@ const gstSectionSlug: Record<string, string> = {
 const gstSlugToSection: Record<string, GstSection> = Object.fromEntries(
   Object.entries(gstSectionSlug).map(([section, slug]) => [slug, section as GstSection]),
 )
+
+const accessSectionSlug: Record<AccessSection, string> = {
+  Users: 'users',
+  'Roles & Permissions': 'roles',
+  'Approval Limits': 'approval-limits',
+  'Sessions & Devices': 'sessions',
+}
+
+const accessSlugToSection: Record<string, AccessSection> = Object.fromEntries(
+  Object.entries(accessSectionSlug).map(([section, slug]) => [slug, section as AccessSection]),
+)
+
+const rulesSectionSlug: Record<RulesPageSection, string> = {
+  'Global Rules': 'global',
+  'Booking Rules': 'booking',
+  Pricing: 'pricing',
+}
+
+const rulesSlugToSection: Record<string, RulesPageSection> = Object.fromEntries(
+  Object.entries(rulesSectionSlug).map(([section, slug]) => [slug, section as RulesPageSection]),
+)
+
+const getRulesSectionFromLocation = (): RulesPageSection => {
+  if (typeof window === 'undefined') return 'Global Rules'
+  const hash = window.location.hash
+  if (hash.startsWith('#super-admin/pricing-rules')) return 'Pricing'
+  if (hash.startsWith('#super-admin/booking-rules')) return 'Booking Rules'
+  if (hash.startsWith('#super-admin/global-rules')) return 'Global Rules'
+  const slug = hash.slice('#super-admin/rules/'.length).split(/[?#]/)[0]
+  return rulesSlugToSection[slug] ?? 'Global Rules'
+}
+
+const getAccessSectionFromLocation = (): AccessSection => {
+  if (typeof window === 'undefined') return 'Users'
+  const slug = window.location.hash.slice('#super-admin/access/'.length).split(/[?#]/)[0]
+  return accessSlugToSection[slug] ?? 'Users'
+}
 
 const documentSectionSlug: Record<string, string> = {
   'Vehicle Documents': 'vehicle-docs',
@@ -331,32 +365,41 @@ type SearchResult = {
 }
 
 const searchablePages = [
+  'Finance',
   'States',
   'Cities',
   'Zones',
   'Service Areas',
-  'Global Rules',
-  'Booking Rules',
-  'Pricing',
+  'Rules',
   'Feature Flags',
   'Users',
   'Roles & Permissions',
+  'Approval Limits',
+  'Sessions & Devices',
+  'Help / Docs',
 ]
 
 export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardProps) {
+  const [hoveredRevenuePoint, setHoveredRevenuePoint] = useState<number | null>(null)
   const [selectedKpiIndex, setSelectedKpiIndex] = useState<number | null>(() => getKpiIndexFromLocation())
   const [isBookingLedgerPage, setIsBookingLedgerPage] = useState(isBookingLedgerLocation)
   const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatusFilter>(getBookingFilterFromLocation)
-  const [activeNav, setActiveNav] = useState('overview')
+  const [selectedAccessSection, setSelectedAccessSection] = useState<AccessSection>(getAccessSectionFromLocation)
+  const [selectedRulesSection, setSelectedRulesSection] = useState<RulesPageSection>(getRulesSectionFromLocation)
   const [selectedSidebarPage, setSelectedSidebarPage] = useState<string | null>(() => {
-    if (typeof window !== 'undefined' && window.location.hash.startsWith('#super-admin/pricing-rules')) {
-      return 'Pricing'
+    if (typeof window !== 'undefined' && window.location.hash.startsWith('#super-admin/access')) {
+      return 'Users & Access'
     }
-    if (typeof window !== 'undefined' && window.location.hash.startsWith('#super-admin/booking-rules')) {
-      return 'Booking Rules'
+    if (typeof window !== 'undefined' && window.location.hash === '#super-admin/finance') {
+      return 'Finance'
     }
-    if (typeof window !== 'undefined' && window.location.hash.startsWith('#super-admin/global-rules')) {
-      return 'Global Rules'
+    if (typeof window !== 'undefined' && (
+      window.location.hash.startsWith('#super-admin/rules') ||
+      window.location.hash.startsWith('#super-admin/pricing-rules') ||
+      window.location.hash.startsWith('#super-admin/booking-rules') ||
+      window.location.hash.startsWith('#super-admin/global-rules')
+    )) {
+      return 'Rules'
     }
     if (typeof window !== 'undefined' && window.location.hash.startsWith('#super-admin/feature-flags')) {
       return 'Feature Flags'
@@ -388,11 +431,10 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
   const [unassignedJobs, setUnassignedJobs] = useState<UnassignedJob[]>(initialUnassignedJobs)
   const [kycReviews, setKycReviews] = useState<KycReview[]>(initialKycReviews)
   const [featureFlagsList, setFeatureFlagsList] = useState<FeatureFlag[]>(initialFeatureFlags)
-  const [headerPanel, setHeaderPanel] = useState<'search' | 'notifications' | 'alerts' | 'period' | null>(null)
+  const [headerPanel, setHeaderPanel] = useState<'search' | 'alerts' | 'profile' | null>(null)
   const [globalQuery, setGlobalQuery] = useState('')
   const [notificationsList, setNotificationsList] = useState<DashboardNotification[]>(initialNotifications)
   const [alertsList] = useState<DashboardAlert[]>(initialDashboardAlerts)
-  const [dashboardPeriod, setDashboardPeriod] = useState('This Month')
   const [bookingDate, setBookingDate] = useState<string>(() => toIsoDate(new Date()))
   const [bookingDateSearch, setBookingDateSearch] = useState('')
   const [pageSearch, setPageSearch] = useState<{ page: string; query: string; token: number } | null>(null)
@@ -415,7 +457,6 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
   const [sidebarTriggerAddServiceArea, setSidebarTriggerAddServiceArea] = useState(false)
   const selectedKpi = selectedKpiIndex === null ? null : kpiMetrics[selectedKpiIndex]
 
-  const recentBookingDates = getRecentDateOptions(7)
   const selectedDateBookings = getBookingsForDate(bookingDate)
   const selectedDateSummary = summarizeBookings(selectedDateBookings)
   const bookingDateSearchTerm = bookingDateSearch.trim().toLowerCase()
@@ -433,12 +474,15 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
       setSelectedAttentionSlug(getAttentionSlugFromLocation())
       setIsBookingLedgerPage(isBookingLedgerLocation())
       setBookingStatusFilter(getBookingFilterFromLocation())
-      if (window.location.hash.startsWith('#super-admin/pricing-rules')) {
-        setSelectedSidebarPage('Pricing')
-      } else if (window.location.hash.startsWith('#super-admin/booking-rules')) {
-        setSelectedSidebarPage('Booking Rules')
-      } else if (window.location.hash.startsWith('#super-admin/global-rules')) {
-        setSelectedSidebarPage('Global Rules')
+      const ruleHash = window.location.hash.startsWith('#super-admin/rules') ||
+        window.location.hash.startsWith('#super-admin/pricing-rules') ||
+        window.location.hash.startsWith('#super-admin/booking-rules') ||
+        window.location.hash.startsWith('#super-admin/global-rules')
+      if (ruleHash) {
+        setSelectedRulesSection(getRulesSectionFromLocation())
+        setSelectedSidebarPage('Rules')
+      } else if (window.location.hash === '#super-admin/finance') {
+        setSelectedSidebarPage('Finance')
       } else if (window.location.hash.startsWith('#super-admin/feature-flags')) {
         setSelectedSidebarPage('Feature Flags')
       } else if (window.location.hash.startsWith('#super-admin/audit-log')) {
@@ -451,6 +495,9 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
         setSelectedSidebarPage('States')
       } else if (window.location.hash.startsWith('#super-admin/cities')) {
         setSelectedSidebarPage('Cities')
+      } else if (window.location.hash.startsWith('#super-admin/access')) {
+        setSelectedAccessSection(getAccessSectionFromLocation())
+        setSelectedSidebarPage('Users & Access')
       } else if (window.location.hash.startsWith('#super-admin/gst/')) {
         const gstSection = gstSlugToSection[window.location.hash.slice('#super-admin/gst/'.length)]
         if (gstSection) setSelectedSidebarPage(gstSection)
@@ -652,11 +699,6 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
     setIsBookingLedgerPage(false)
   }
 
-  const navigateToSection = (section: string) => {
-    document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    setActiveNav(section)
-  }
-
   const navigateSidebar = (label: string, options?: { keepSearch?: boolean }) => {
     if (label === 'Sign Out') {
       onSignOut?.()
@@ -665,6 +707,8 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
 
     if (label === 'States') {
       window.history.pushState(null, '', '#super-admin/states')
+    } else if (label === 'Finance') {
+      window.history.pushState(null, '', '#super-admin/finance')
     } else if (label === 'Cities') {
       window.history.pushState(null, '', '#super-admin/cities')
     } else if (label === 'Zones') {
@@ -675,12 +719,18 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
       window.history.pushState(null, '', '#super-admin/feature-flags')
     } else if (label === 'Audit Log') {
       window.history.pushState(null, '', '#super-admin/audit-log')
-    } else if (label === 'Global Rules') {
-      window.history.pushState(null, '', '#super-admin/global-rules')
-    } else if (label === 'Booking Rules') {
-      window.history.pushState(null, '', '#super-admin/booking-rules')
-    } else if (label === 'Pricing') {
-      window.history.pushState(null, '', '#super-admin/pricing-rules')
+    } else if (label === 'Rules') {
+      window.history.pushState(null, '', `#super-admin/rules/${rulesSectionSlug[selectedRulesSection]}`)
+    } else if (label === 'Global Rules' || label === 'Booking Rules' || label === 'Pricing') {
+      const section = label as RulesPageSection
+      setSelectedRulesSection(section)
+      window.history.pushState(null, '', `#super-admin/rules/${rulesSectionSlug[section]}`)
+    } else if (accessSections.includes(label as AccessSection)) {
+      const section = label as AccessSection
+      setSelectedAccessSection(section)
+      window.history.pushState(null, '', `#super-admin/access/${accessSectionSlug[section]}`)
+    } else if (label === 'Users & Access') {
+      window.history.pushState(null, '', `#super-admin/access/${accessSectionSlug[selectedAccessSection]}`)
     } else if (gstSectionSlug[label]) {
       window.history.pushState(null, '', `#super-admin/gst/${gstSectionSlug[label]}`)
     } else if (label === 'GST Management') {
@@ -697,15 +747,18 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
       window.history.pushState(null, '', '#super-admin/notifications')
     } else if (label === 'Dashboard') {
       if (
+        window.location.hash === '#super-admin/finance' ||
         window.location.hash.startsWith('#super-admin/states') ||
         window.location.hash.startsWith('#super-admin/cities') ||
         window.location.hash.startsWith('#super-admin/zones') ||
         window.location.hash.startsWith('#super-admin/service-areas') ||
         window.location.hash.startsWith('#super-admin/feature-flags') ||
         window.location.hash.startsWith('#super-admin/audit-log') ||
+        window.location.hash.startsWith('#super-admin/rules') ||
         window.location.hash.startsWith('#super-admin/global-rules') ||
         window.location.hash.startsWith('#super-admin/booking-rules') ||
         window.location.hash.startsWith('#super-admin/pricing-rules') ||
+        window.location.hash.startsWith('#super-admin/access') ||
         window.location.hash.startsWith('#super-admin/kpi/') ||
         window.location.hash.startsWith('#super-admin/attention/') ||
         window.location.hash.startsWith('#super-admin/bookings/') ||
@@ -727,8 +780,9 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
     setSelectedKpiIndex(null)
     setSelectedAttentionSlug(null)
     setIsBookingLedgerPage(false)
-    setSelectedSidebarPage(label === 'Dashboard' ? null : label)
-    if (label === 'Dashboard') setActiveNav('overview')
+    const isAccessSection = accessSections.includes(label as AccessSection)
+    const isRulesSection = label === 'Global Rules' || label === 'Booking Rules' || label === 'Pricing'
+    setSelectedSidebarPage(label === 'Dashboard' ? null : isAccessSection ? 'Users & Access' : isRulesSection ? 'Rules' : label)
     if (!options?.keepSearch) setPageSearch(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -834,7 +888,7 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
       <style>{`
         :root {
           --page-bg: radial-gradient(1200px 600px at top left, #fbfbfd 0%, #f1f5f9 100%);
-          --sidebar-bg: radial-gradient(120% 120% at 0% 0%, #0f172a 0%, #0a1324 70%, #070c18 100%);
+          --sidebar-bg: radial-gradient(100% 42% at 0% 0%, rgba(255,107,44,0.18) 0%, rgba(255,107,44,0) 72%), linear-gradient(180deg, #111c32 0%, #0a1324 68%, #070c18 100%);
           --sidebar-text: rgba(255,255,255,0.8);
           --card-bg: rgba(255,255,255,0.98);
           --line: rgba(15, 23, 42, 0.08);
@@ -980,10 +1034,98 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
 
         .sidebar-footer {
           margin-top: auto;
-          border-top: 1px solid rgba(255,255,255,0.08);
-          padding-top: 12px;
           display: grid;
-          gap: 8px;
+          gap: 10px;
+        }
+
+        .sidebar-account {
+          display: grid;
+          gap: 10px;
+          padding: 14px 4px 0;
+          border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-account-profile {
+          width: 100%;
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 0 6px;
+          border: 0;
+          border-radius: 10px;
+          background: transparent;
+          color: inherit;
+          font: inherit;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .sidebar-account-profile:hover .sidebar-account-copy strong {
+          color: #fff;
+        }
+
+        .sidebar-account-avatar {
+          width: 34px;
+          height: 34px;
+          flex: 0 0 34px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: #08a66c;
+          color: #fff;
+          font-size: 0.7rem;
+          font-weight: 800;
+        }
+
+        .sidebar-account-copy {
+          min-width: 0;
+          display: grid;
+          gap: 2px;
+        }
+
+        .sidebar-account-copy strong {
+          overflow: hidden;
+          color: #fff;
+          font-size: 0.76rem;
+          font-weight: 700;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .sidebar-account-copy span {
+          overflow: hidden;
+          color: rgba(255,255,255,0.62);
+          font-size: 0.66rem;
+          line-height: 1.35;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .sidebar-account-copy .sidebar-account-email {
+          color: rgba(255,255,255,0.42);
+          font-size: 0.6rem;
+        }
+
+        .sidebar-signout {
+          width: 100%;
+          min-height: 34px;
+          padding: 7px 12px;
+          border: 0;
+          border-radius: 10px;
+          background: transparent;
+          color: rgba(255,255,255,0.82);
+          font: inherit;
+          font-size: 0.78rem;
+          font-weight: 650;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.18s ease, color 0.18s ease;
+        }
+
+        .sidebar-signout:hover {
+          background: rgba(255,255,255,0.08);
+          color: #fff;
         }
 
         .superadmin-main {
@@ -1065,60 +1207,66 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
           display: flex;
           align-items: center;
           justify-content: space-between;
+          gap: 14px;
+          background: linear-gradient(135deg, #fff 0%, #fbfcfe 100%);
+          border: 1px solid rgba(15, 23, 42, 0.07);
+          border-radius: 18px;
+          padding: 12px 16px;
+          box-shadow: 0 10px 28px -22px rgba(15, 23, 42, 0.36);
+        }
+
+        .header-leading {
+          min-width: 0;
+          display: flex;
+          align-items: center;
           gap: 18px;
-          background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.92) 100%);
-          border: 1px solid rgba(15, 23, 42, 0.06);
-          border-radius: 22px;
-          padding: 18px 20px;
-          box-shadow: 0 24px 60px -28px rgba(15, 23, 42, 0.6);
-          backdrop-filter: blur(4px);
+          flex-wrap: nowrap;
         }
 
         .header-copy {
           display: grid;
-          gap: 4px;
+          gap: 3px;
         }
 
-        .superadmin-nav {
-          display: flex;
+        .header-brand {
+          display: inline-flex;
+          flex: 0 0 auto;
           align-items: center;
-          gap: 6px;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-          padding: 5px 6px;
-          border-radius: 12px;
-          background: linear-gradient(100deg, var(--brand-orange), var(--brand-orange-deep));
+          gap: 10px;
+          min-height: 42px;
+          padding-right: 20px;
+          border-right: 1px solid #e5e7eb;
+          color: #111827;
+          font-size: 0.9rem;
+          font-weight: 800;
+          letter-spacing: -0.025em;
+          white-space: nowrap;
         }
 
-        .nav-pill {
-          border: 1px solid transparent;
-          background: transparent;
-          color: rgba(255,255,255,0.88);
-          border-radius: 8px;
-          padding: 6px 10px;
-          font-size: 0.72rem;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .nav-pill.active {
-          background: #fff;
-          border-color: rgba(255,255,255,0.8);
-          color: var(--brand-orange-deep);
-        }
-
-        .nav-pill:hover {
-          background: rgba(255,255,255,0.16);
+        .header-brand-mark {
+          width: 34px;
+          height: 34px;
+          border-radius: 11px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, var(--brand-orange), var(--brand-orange-deep));
           color: #fff;
+          font-size: 1rem;
+          font-weight: 850;
+          box-shadow: 0 5px 12px rgba(239, 74, 18, 0.2), inset 0 1px 0 rgba(255,255,255,0.24);
         }
 
         .header-toolbar {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 8px;
           flex-wrap: wrap;
           justify-content: flex-end;
+          padding: 0;
+          border: 0;
+          border-radius: 0;
+          background: transparent;
+          box-shadow: none;
         }
 
         .header-actions {
@@ -1132,46 +1280,68 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
 
         .header-kicker {
           margin: 0;
-          font-size: 0.72rem;
-          letter-spacing: 0.12em;
+          font-size: 0.64rem;
+          letter-spacing: 0.1em;
           text-transform: uppercase;
-          color: var(--muted);
-          font-weight: 700;
+          color: #b4532b;
+          font-weight: 750;
         }
 
         .header-title {
           margin: 0;
-          font-size: clamp(1.8rem, 2vw, 2.4rem);
-          letter-spacing: -0.06em;
-          line-height: 1.1;
-          font-weight: 800;
+          font-size: clamp(1.45rem, 1.8vw, 1.8rem);
+          letter-spacing: -0.04em;
+          line-height: 1.08;
+          font-weight: 760;
+          color: #111827;
         }
 
-        .header-breadcrumb {
-          color: var(--muted);
-          font-size: 0.8rem;
-          font-weight: 600;
+        .header-scope {
+          margin: 0;
+          color: #64748b;
+          font-size: 0.76rem;
+          font-weight: 500;
+          letter-spacing: 0.015em;
         }
 
         .header-action {
-          background: #f2f5f7;
-          border: 1px solid rgba(15,23,42,0.06);
-          border-radius: 12px;
+          background: transparent;
+          border: 1px solid transparent;
+          border-radius: 10px;
           padding: 9px 12px;
           color: var(--text);
           font-weight: 700;
           display: inline-flex;
           align-items: center;
           gap: 8px;
+          cursor: pointer;
+          transition: background-color 0.16s ease, color 0.16s ease;
         }
+
+        .header-action:hover,
+        .header-action.is-open { background: rgba(15, 23, 42, 0.045); color: var(--brand-orange-deep); }
 
         .header-search {
           min-width: 220px;
           padding: 10px 12px;
-          border-radius: 12px;
-          border: 1px solid var(--line);
-          background: #fff;
+          border-radius: 10px;
+          border: 1px solid transparent;
+          background: transparent;
           color: var(--text);
+          box-shadow: none;
+        }
+
+        .header-search:focus {
+          outline: none;
+          border: 0;
+          background: rgba(15, 23, 42, 0.035);
+        }
+
+        .superadmin-role-dashboard .dashboard-header .header-toolbar .header-search,
+        .superadmin-role-dashboard .dashboard-header .header-toolbar .header-search:focus,
+        .superadmin-role-dashboard .dashboard-header .header-toolbar .header-action {
+          border: 0 !important;
+          box-shadow: none !important;
         }
 
         .header-avatar {
@@ -1183,7 +1353,28 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
           display: grid;
           place-items: center;
           font-weight: 800;
-          box-shadow: 0 10px 22px rgba(8,166,108,0.24);
+          box-shadow: none;
+        }
+
+        .header-popover.profile-popover {
+          width: 110px;
+        }
+
+        .profile-logout {
+          width: 100%;
+          padding: 9px 12px;
+          border: 0;
+          background: transparent;
+          color: #b42318;
+          font: inherit;
+          font-size: 0.76rem;
+          font-weight: 700;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .profile-logout:hover {
+          background: #fef2f2;
         }
 
         .header-toolbar {
@@ -1416,45 +1607,6 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
           background: #f59e0b;
         }
 
-        .period-menu-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          width: 100%;
-          padding: 11px 16px;
-          border: 0;
-          background: transparent;
-          font: inherit;
-          font-size: 0.82rem;
-          font-weight: 600;
-          color: #1e293b;
-          cursor: pointer;
-          text-align: left;
-        }
-
-        .period-menu-item:hover {
-          background: #f8fafc;
-        }
-
-        .period-menu-item.selected {
-          color: #ef4a12;
-          font-weight: 800;
-          background: rgba(255, 107, 44, 0.06);
-        }
-
-        .period-current {
-          font-size: 0.66rem;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          color: #94a3b8;
-        }
-
-        .period-menu-item.selected .period-current {
-          color: #ef4a12;
-        }
-
         .search-result-group {
           padding: 7px 16px;
           font-size: 0.66rem;
@@ -1499,16 +1651,32 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
         .kpi-grid {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 16px;
+          gap: 12px;
+        }
+
+        .dashboard-kpi-section {
+          display: grid;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .dashboard-kpi-heading {
+          margin: 0;
+          color: var(--text);
+          font-size: 0.86rem;
+          font-weight: 700;
         }
 
         .kpi-card {
           background: var(--card-bg);
           border: 1px solid var(--line);
-          border-radius: 18px;
-          padding: 16px 16px 14px;
-          box-shadow: var(--shadow);
+          border-radius: 14px;
+          min-height: 100px;
+          padding: 14px 16px;
+          box-shadow: var(--shadow-sm);
           display: grid;
+          grid-template-rows: auto auto;
+          align-content: center;
           gap: 12px;
           text-align: left;
           cursor: pointer;
@@ -1525,59 +1693,31 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
         .kpi-card.purple { border-color: rgba(124,58,237,0.18); }
         .kpi-card.orange { border-color: rgba(245,158,11,0.18); }
 
-        .kpi-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-        }
-
-        .kpi-icon {
-          width: 44px;
-          height: 44px;
-          display: grid;
-          place-items: center;
-          border-radius: 14px;
-          background: var(--green-soft);
-          color: var(--green);
-          font-weight: 700;
-          font-size: 1.25rem;
-        }
-
-        .kpi-card.blue .kpi-icon { background: var(--blue-soft); color: var(--blue); }
-        .kpi-card.purple .kpi-icon { background: var(--purple-soft); color: var(--purple); }
-        .kpi-card.orange .kpi-icon { background: var(--orange-soft); color: var(--orange); }
-
         .kpi-label {
           color: var(--muted);
-          font-size: 0.82rem;
+          font-size: 0.78rem;
           font-weight: 600;
+          line-height: 1.3;
         }
 
         .kpi-value {
-          font-size: clamp(1.4rem, 1.8vw, 1.9rem);
+          font-size: clamp(1.35rem, 1.7vw, 1.7rem);
           letter-spacing: -0.05em;
           font-weight: 800;
-        }
-
-        .kpi-change {
-          color: var(--green);
-          font-size: 0.8rem;
-          font-weight: 700;
         }
 
         .attention {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 14px;
+          gap: 12px;
         }
 
         .attention-card {
           border: 1px solid var(--line);
           background: var(--card-bg);
-          border-radius: 18px;
-          box-shadow: var(--shadow);
-          padding: 16px 18px;
+          border-radius: 12px;
+          box-shadow: var(--shadow-sm);
+          padding: 12px 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -1586,16 +1726,22 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
         .attention-label {
           color: var(--muted);
           font-size: 0.76rem;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
+          font-weight: 600;
         }
 
         .attention-value {
-          font-size: 2rem;
+          font-size: 1.35rem;
           letter-spacing: -0.06em;
           font-weight: 800;
           line-height: 1;
+        }
+
+        .attention-card > div:first-child {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          width: 100%;
         }
 
         button.attention-card {
@@ -2264,6 +2410,7 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
         }
 
         .trend-hero-item {
+          min-width: 0;
           display: grid;
           gap: 3px;
         }
@@ -2303,6 +2450,29 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
           font-size: 12px;
           font-weight: 800;
           fill: #2563eb;
+        }
+
+        .trend-tooltip rect {
+          fill: #101827;
+          rx: 6px;
+        }
+
+        .trend-tooltip text {
+          fill: #fff;
+          font-size: 11px;
+          font-weight: 700;
+          pointer-events: none;
+        }
+
+        .trend-point-hit-area {
+          fill: transparent;
+          cursor: crosshair;
+        }
+
+        .trend-point-hit-area:focus-visible {
+          outline: none;
+          stroke: #2563eb;
+          stroke-width: 2px;
         }
 
         .sd-legend {
@@ -2671,6 +2841,80 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
           color: var(--muted);
           font-size: 0.86rem;
         }
+
+        .superadmin-role-dashboard,
+        .superadmin-main,
+        .dashboard-content,
+        .sidebar-page {
+          max-width: 100%;
+          min-width: 0;
+        }
+
+        @media (max-width: 1280px) {
+          .superadmin-role-dashboard {
+            grid-template-columns: 220px minmax(0, 1fr);
+            gap: 16px;
+          }
+
+          .analytics-grid {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .dashboard-header,
+          .sidebar-page-intro {
+            flex-wrap: wrap;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .superadmin-role-dashboard {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .superadmin-sidebar {
+            position: static;
+            height: auto;
+            max-height: none;
+          }
+
+          .sidebar-stack {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          }
+        }
+
+        @media (max-width: 600px) {
+          .stats-grid {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .header-leading {
+            width: 100%;
+            justify-content: flex-start;
+            gap: 14px;
+          }
+
+          .header-brand {
+            min-height: 34px;
+            padding-right: 12px;
+          }
+
+          .header-brand-mark {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+          }
+
+          .dashboard-header,
+          .sidebar-page-intro,
+          .panel-header {
+            align-items: stretch;
+            flex-direction: column;
+          }
+        }
       `}</style>
 
       <aside className="superadmin-sidebar">
@@ -2750,10 +2994,15 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
         <div className="sidebar-section">
           <div className="sidebar-label">Organization & Access</div>
           <ul className="sidebar-stack">
-            <li><button type="button" onClick={() => navigateSidebar('Users')} className={`sidebar-item ${selectedSidebarPage === 'Users' ? 'active' : ''}`}>Users</button></li>
-            <li><button type="button" onClick={() => navigateSidebar('Roles & Permissions')} className={`sidebar-item ${selectedSidebarPage === 'Roles & Permissions' ? 'active' : ''}`}>Roles & Permissions</button></li>
-            <li><button type="button" onClick={() => navigateSidebar('Approval Limits')} className={`sidebar-item ${selectedSidebarPage === 'Approval Limits' ? 'active' : ''}`}>Approval Limits</button></li>
-            <li><button type="button" onClick={() => navigateSidebar('Sessions & Devices')} className={`sidebar-item ${selectedSidebarPage === 'Sessions & Devices' ? 'active' : ''}`}>Sessions & Devices</button></li>
+            <li>
+              <button
+                type="button"
+                onClick={() => navigateSidebar('Users & Access')}
+                className={`sidebar-item ${selectedSidebarPage === 'Users & Access' ? 'active' : ''}`}
+              >
+                Users &amp; Access
+              </button>
+            </li>
           </ul>
         </div>
 
@@ -2763,31 +3012,13 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
             <li>
               <button
                 type="button"
-                onClick={() => navigateSidebar('Global Rules')}
-                className={`sidebar-item ${selectedSidebarPage === 'Global Rules' ? 'active' : ''}`}
+                onClick={() => navigateSidebar('Rules')}
+                className={`sidebar-item ${selectedSidebarPage === 'Rules' ? 'active' : ''}`}
               >
-                <span>Global Rules</span>
-                <span className="sidebar-pill">{rulesCountFor('global')}</span>
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={() => navigateSidebar('Booking Rules')}
-                className={`sidebar-item ${selectedSidebarPage === 'Booking Rules' ? 'active' : ''}`}
-              >
-                <span>Booking Rules</span>
-                <span className="sidebar-pill">{rulesCountFor('booking')}</span>
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={() => navigateSidebar('Pricing')}
-                className={`sidebar-item ${selectedSidebarPage === 'Pricing' ? 'active' : ''}`}
-              >
-                <span>Pricing</span>
-                <span className="sidebar-pill">{rulesCountFor('pricing')}</span>
+                <span>Rules</span>
+                <span className="sidebar-pill">
+                  {rulesCountFor('global') + rulesCountFor('booking') + rulesCountFor('pricing')}
+                </span>
               </button>
             </li>
              <li>
@@ -2800,6 +3031,7 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
                 <span className="sidebar-pill">{featureFlagsList.filter((flag) => flag.enabled).length} ON</span>
               </button>
             </li>
+            <li><button type="button" onClick={() => navigateSidebar('Finance')} className={`sidebar-item ${selectedSidebarPage === 'Finance' ? 'active' : ''}`}>Finance overview</button></li>
             <li><button type="button" onClick={() => navigateSidebar('GST Management')} className={`sidebar-item ${selectedSidebarPage === 'GST Management' ? 'active' : ''}`}>GST Management</button></li>
             <li><button type="button" onClick={() => navigateSidebar('Document Management')} className={`sidebar-item ${selectedSidebarPage === 'Document Management' ? 'active' : ''}`}>Document Management</button></li>
             <li><button type="button" onClick={() => navigateSidebar('Refund Management')} className={`sidebar-item ${selectedSidebarPage === 'Refund Management' ? 'active' : ''}`}>Refund Management</button></li>
@@ -2819,42 +3051,40 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
 
         <div className="sidebar-footer">
           <button type="button" onClick={() => navigateSidebar('Help / Docs')} className={`sidebar-item ${selectedSidebarPage === 'Help / Docs' ? 'active' : ''}`}>Help / Docs</button>
-          <button type="button" onClick={() => navigateSidebar('Super Admin Profile')} className={`sidebar-item ${selectedSidebarPage === 'Super Admin Profile' ? 'active' : ''}`}>Super Admin Profile</button>
-          <button type="button" onClick={() => navigateSidebar('Sign Out')} className="sidebar-item">Sign Out</button>
+          <div className="sidebar-account">
+            <button
+              type="button"
+              className="sidebar-account-profile"
+              aria-label="Open Super Admin Profile"
+              onClick={() => navigateSidebar('Super Admin Profile')}
+            >
+              <span className="sidebar-account-avatar" aria-hidden="true">SA</span>
+              <span className="sidebar-account-copy">
+                <strong>Super Admin</strong>
+                <span>Platform Admin · All territories</span>
+                <span className="sidebar-account-email">{emailForRole('super-admin')}</span>
+              </span>
+            </button>
+            <button type="button" onClick={() => navigateSidebar('Sign Out')} className="sidebar-signout">Sign Out</button>
+          </div>
         </div>
       </aside>
 
       <div className="superadmin-main">
         <header className="dashboard-header">
-          <div className="header-copy">
-            <p className="header-kicker">National Overview</p>
-            <h1 className="header-title">India • All States • All Cities</h1>
-            <div className="header-breadcrumb">Overview / Platform / National View</div>
+          <div className="header-leading">
+            <div className="header-brand" aria-label="EquipHub">
+              <span className="header-brand-mark" aria-hidden="true">E</span>
+              <span>EquipHub</span>
+            </div>
+            <div className="header-copy">
+              <p className="header-kicker">National overview</p>
+              <h1 className="header-title">India</h1>
+              <p className="header-scope">All states <span aria-hidden="true">·</span> All cities</p>
+            </div>
           </div>
 
           <div className="header-actions">
-            {selectedSidebarPage === null && (
-              <nav className="superadmin-nav" aria-label="Super admin menu">
-                {[
-                  { id: 'overview', label: 'Overview' },
-                  { id: 'geography', label: 'Geography' },
-                  { id: 'operations', label: 'Operations' },
-                  { id: 'finance', label: 'Finance' },
-                  { id: 'compliance', label: 'Compliance' },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`nav-pill ${activeNav === item.id ? 'active' : ''}`}
-                    aria-current={activeNav === item.id ? 'location' : undefined}
-                    onClick={() => navigateToSection(item.id)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </nav>
-            )}
-
             <div className="header-toolbar">
               {headerPanel && <div className="header-panel-backdrop" aria-hidden="true" onClick={() => setHeaderPanel(null)} />}
 
@@ -2900,26 +3130,31 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
               <div className="header-popover-wrap">
                 <button
                   type="button"
-                  className={`header-action ${headerPanel === 'notifications' ? 'is-open' : ''}`}
-                  aria-label="View notifications"
-                  onClick={() => setHeaderPanel(headerPanel === 'notifications' ? null : 'notifications')}
+                  className={`header-action ${headerPanel === 'alerts' ? 'is-open' : ''}`}
+                  aria-label="View alerts and notifications"
+                  onClick={() => setHeaderPanel(headerPanel === 'alerts' ? null : 'alerts')}
                 >
-                  🔔 {unreadNotifications > 0 && <span className="header-badge">{unreadNotifications}</span>}
+                  ⚠ Alerts {(unreadNotifications + alertsList.length) > 0 && (
+                    <span className="header-badge header-badge-amber">{unreadNotifications + alertsList.length}</span>
+                  )}
                 </button>
-                {headerPanel === 'notifications' && (
-                  <div className="header-popover" role="dialog" aria-label="Notifications">
+                {headerPanel === 'alerts' && (
+                  <div className="header-popover" role="dialog" aria-label="Alerts">
                     <div className="header-popover-head">
-                      <h4>Notifications</h4>
-                      {unreadNotifications > 0 && (
-                        <button type="button" className="header-popover-action" onClick={markAllNotificationsRead}>
-                          Mark all read
-                        </button>
-                      )}
+                      <h4>Alerts</h4>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span className="header-popover-meta">{alertsList.length} alerts · {unreadNotifications} unread</span>
+                        {unreadNotifications > 0 && (
+                          <button type="button" className="header-popover-action" onClick={markAllNotificationsRead}>
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="header-feed-list">
                       {notificationsList.map((item) => (
                         <button
-                          key={item.id}
+                          key={`notification-${item.id}`}
                           type="button"
                           className="header-feed-item"
                           onClick={() => {
@@ -2938,28 +3173,8 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
                           </span>
                         </button>
                       ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="header-popover-wrap">
-                <button
-                  type="button"
-                  className={`header-action ${headerPanel === 'alerts' ? 'is-open' : ''}`}
-                  onClick={() => setHeaderPanel(headerPanel === 'alerts' ? null : 'alerts')}
-                >
-                  ⚠ Alerts {alertsList.length > 0 && <span className="header-badge header-badge-amber">{alertsList.length}</span>}
-                </button>
-                {headerPanel === 'alerts' && (
-                  <div className="header-popover" role="dialog" aria-label="Alerts">
-                    <div className="header-popover-head">
-                      <h4>Alerts</h4>
-                      <span className="header-popover-meta">{alertsList.length} open</span>
-                    </div>
-                    <div className="header-feed-list">
                       {alertsList.map((item) => (
-                        <button key={item.id} type="button" className="header-feed-item" onClick={() => openFeedTarget(item.target)}>
+                        <button key={`alert-${item.id}`} type="button" className="header-feed-item" onClick={() => openFeedTarget(item.target)}>
                           <span className={`header-feed-dot ${item.severity === 'Critical' ? 'red' : item.severity === 'Warning' ? 'amber' : 'blue'}`} />
                           <span className="header-feed-body">
                             <span className="header-alert-top">
@@ -2981,57 +3196,34 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
                 )}
               </div>
 
-              <div className="header-popover-wrap">
-                <button
-                  type="button"
-                  className={`header-action ${headerPanel === 'period' ? 'is-open' : ''}`}
-                  onClick={() => setHeaderPanel(headerPanel === 'period' ? null : 'period')}
-                >
-                  {dashboardPeriod} ▾
-                </button>
-                {headerPanel === 'period' && (
-                  <div className="header-popover period-popover" role="dialog" aria-label="Dashboard period">
-                    <div className="header-popover-head">
-                      <h4>Dashboard period</h4>
-                    </div>
-                    {dashboardPeriods.map((period) => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+                <div className="header-popover-wrap">
+                  <button
+                    type="button"
+                    className="header-avatar"
+                    aria-label="Super admin account"
+                    aria-expanded={headerPanel === 'profile'}
+                    aria-haspopup="dialog"
+                    onClick={() => setHeaderPanel(headerPanel === 'profile' ? null : 'profile')}
+                    style={{ cursor: 'pointer', border: 'none' }}
+                  >
+                    SA
+                  </button>
+                  {headerPanel === 'profile' && (
+                    <div className="header-popover profile-popover" role="dialog" aria-label="Super admin account menu">
                       <button
-                        key={period}
                         type="button"
-                        className={`period-menu-item ${dashboardPeriod === period ? 'selected' : ''}`}
+                        className="profile-logout"
                         onClick={() => {
-                          setDashboardPeriod(period)
                           setHeaderPanel(null)
+                          onSignOut?.()
                         }}
                       >
-                        <span>{period}</span>
-                        {dashboardPeriod === period && <span className="period-current">Current</span>}
+                        Log out
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
-                <button
-                  type="button"
-                  className="header-avatar"
-                  aria-label="User profile"
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      if (window.location.hash.startsWith('#super-admin/profile')) {
-                        navigateSidebar('Dashboard')
-                      } else {
-                        navigateSidebar('Super Admin Profile')
-                      }
-                    }
-                  }}
-                  style={{ cursor: 'pointer', border: 'none' }}
-                >
-                  SA
-                </button>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>Super Admin</span>
-                <button type="button" className="org-button" onClick={onSignOut}>Logout</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -3050,11 +3242,13 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
             onBack={returnFromAttention}
           />
         ) : selectedKpi ? (
-          <KpiDetailPage metric={selectedKpi} onBack={returnToOverview} onOpenBookingLedger={openBookingLedger} />
+          <KpiDetailPage metric={selectedKpi} onBack={returnToOverview} />
         ) : selectedSidebarPage === 'States' ? (
           <StatesPage
             key={`states-page-${pageSearch?.page === 'States' ? pageSearch.token : 0}`}
             states={statesList}
+            cities={citiesList}
+            zones={zonesList}
             setStates={setStatesList}
             onBack={() => navigateSidebar('Dashboard')}
             statusFilter={statesFilterFromSidebar}
@@ -3068,6 +3262,7 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
           <CitiesPage
             key={`cities-page-${pageSearch?.page === 'Cities' ? pageSearch.token : 0}`}
             cities={citiesList}
+            zones={zonesList}
             setCities={setCitiesList}
             onBack={() => navigateSidebar('Dashboard')}
             statusFilter={citiesFilterFromSidebar}
@@ -3080,6 +3275,7 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
           <ZonesPage
             key={`zones-page-${pageSearch?.page === 'Zones' ? pageSearch.token : 0}`}
             zones={zonesList}
+            cities={citiesList}
             setZones={setZonesList}
             onBack={() => navigateSidebar('Dashboard')}
             statusFilter={zonesFilterFromSidebar}
@@ -3098,21 +3294,21 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
             isAddModalOpen={sidebarTriggerAddServiceArea}
             setIsAddModalOpen={setSidebarTriggerAddServiceArea}
           />
-        ) : selectedSidebarPage === 'Global Rules' ||
-            selectedSidebarPage === 'Booking Rules' ||
-            selectedSidebarPage === 'Pricing' ? (
+        ) : selectedSidebarPage === 'Rules' ? (
           <RulesEnginePage
-            section={selectedSidebarPage}
+            key={selectedRulesSection}
+            section={selectedRulesSection}
             domain={
-              selectedSidebarPage === 'Pricing'
+              selectedRulesSection === 'Pricing'
                 ? 'pricing'
-                : selectedSidebarPage === 'Booking Rules'
+                : selectedRulesSection === 'Booking Rules'
                   ? 'booking'
                   : 'global'
             }
             rules={rulesList}
             setRules={setRulesList}
             onBack={() => navigateSidebar('Dashboard')}
+            onNavigate={(section) => navigateSidebar(section)}
           />
         ) : selectedSidebarPage === 'Feature Flags' ? (
           <FeatureFlagsPage
@@ -3122,19 +3318,32 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
           />
         ) : selectedSidebarPage === 'Audit Log' ? (
           <AuditLogPage onBack={() => navigateSidebar('Dashboard')} />
-        ) : selectedSidebarPage === 'Users' ? (
-          <UsersPage onBack={() => navigateSidebar('Dashboard')} />
-        ) : selectedSidebarPage === 'Roles & Permissions' ? (
-          <RolesPermissionsPage onBack={() => navigateSidebar('Dashboard')} />
-        ) : selectedSidebarPage === 'Approval Limits' ? (
-          <ApprovalLimitsPage staff={staffList} setStaff={setStaffList} onBack={() => navigateSidebar('Dashboard')} />
-        ) : selectedSidebarPage === 'Sessions & Devices' ? (
-          <SessionsDevicesPage staff={staffList} setStaff={setStaffList} onBack={() => navigateSidebar('Dashboard')} />
+        ) : selectedSidebarPage === 'Users & Access' ? (
+          <AccessManagementPage
+            section={selectedAccessSection}
+            staff={staffList}
+            setStaff={setStaffList}
+            onNavigate={(section) => navigateSidebar(section)}
+            onBack={() => navigateSidebar('Dashboard')}
+          />
         ) : selectedSidebarPage === 'Document Management' ? (
           <DocumentManagementPage
             section="all"
             onNavigate={(section) => navigateSidebar(section)}
             onBack={() => navigateSidebar('Dashboard')}
+          />
+        ) : selectedSidebarPage === 'Finance' ? (
+          <FinancePage
+            payoutRequests={payoutRequests}
+            onBack={() => navigateSidebar('Dashboard')}
+            onOpenRevenue={() => {
+              const revenueIndex = kpiMetrics.findIndex((metric) => metric.label === 'Total Revenue')
+              if (revenueIndex >= 0) openKpiPage(revenueIndex)
+            }}
+            onOpenPayouts={() => openAttentionQueue('payouts-awaiting-approval')}
+            onOpenBookings={() => openBookingLedger('All')}
+            onOpenGst={() => navigateSidebar('GST Management')}
+            onOpenRefunds={() => navigateSidebar('Refund Management')}
           />
         ) : selectedSidebarPage === 'Refund Management' ? (
           <RefundManagementPage onBack={() => navigateSidebar('Dashboard')} />
@@ -3146,6 +3355,11 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
             setNotifications={setNotificationsList}
             onNavigate={openFeedTarget}
             onBack={() => navigateSidebar('Dashboard')}
+          />
+        ) : selectedSidebarPage === 'Help / Docs' ? (
+          <HelpDocsPage
+            onBack={() => navigateSidebar('Dashboard')}
+            onOpenTickets={() => navigateSidebar('Support Tickets')}
           />
         ) : selectedSidebarPage && documentSections.includes(selectedSidebarPage as DocumentSection) ? (
           <DocumentManagementPage
@@ -3183,41 +3397,42 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
           </section>
         ) : (
           <div className="dashboard-content">
-        <div className="kpi-grid" id="overview">
-          {kpiMetrics.map((item, index) => (
-            <button
-              type="button"
-              key={item.label}
-              className={`kpi-card ${item.tone}`}
-              aria-label={`Open ${item.label} detail page`}
-              onClick={() => openKpiPage(index)}
-            >
-              <div className="kpi-top">
+        <section className="dashboard-kpi-section" id="overview" aria-labelledby="platform-overview-heading">
+          <h2 className="dashboard-kpi-heading" id="platform-overview-heading">Platform overview</h2>
+          <div className="kpi-grid">
+            {kpiMetrics.map((item, index) => (
+              <button
+                type="button"
+                key={item.label}
+                className={`kpi-card ${item.tone}`}
+                aria-label={`Open ${item.label} detail page`}
+                onClick={() => openKpiPage(index)}
+              >
                 <div className="kpi-label">{item.label}</div>
-                <div className="kpi-icon">↗</div>
-              </div>
-              <div className="kpi-value">{item.value}</div>
-              <div className="kpi-change">{item.reportedChange}</div>
-            </button>
-          ))}
-        </div>
+                <div className="kpi-value">{item.value}</div>
+              </button>
+            ))}
+          </div>
+        </section>
 
-        <section className="attention">
-          {attentionKpis.map((item) => (
-            <button
-              type="button"
-              key={item.slug}
-              className="attention-card"
-              aria-label={`Open ${item.title} queue`}
-              onClick={() => openAttentionQueue(item.slug)}
-            >
-              <div>
-                <div className="attention-label">{item.title}</div>
-                <div className={`attention-value tone-${item.tone}`}>{attentionCounts[item.slug]}</div>
-              </div>
-              <div className="kpi-icon">↗</div>
-            </button>
-          ))}
+        <section className="dashboard-kpi-section" aria-labelledby="action-required-heading">
+          <h2 className="dashboard-kpi-heading" id="action-required-heading">Action required</h2>
+          <div className="attention">
+            {attentionKpis.map((item) => (
+              <button
+                type="button"
+                key={item.slug}
+                className="attention-card"
+                aria-label={`Open ${item.title} queue`}
+                onClick={() => openAttentionQueue(item.slug)}
+              >
+                <div>
+                  <div className="attention-label">{item.title}</div>
+                  <div className={`attention-value tone-${item.tone}`}>{attentionCounts[item.slug]}</div>
+                </div>
+              </button>
+            ))}
+          </div>
         </section>
 
         <section className="panel organization-panel" id="geography">
@@ -3334,7 +3549,9 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
           </div>
         )}
 
-        <div className="analytics-grid" id="finance">
+        <section className="dashboard-kpi-section" aria-labelledby="dashboard-trends-heading">
+          <h2 className="dashboard-kpi-heading" id="dashboard-trends-heading">Trends &amp; system health</h2>
+          <div className="analytics-grid" id="finance">
           <div className="panel">
             <div className="panel-header">
               <h3>Revenue Trend</h3>
@@ -3393,7 +3610,18 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
                 <path d={revenueAreaPath} fill="url(#revenueArea)" />
                 <path d={revenueLinePath} fill="none" stroke="url(#revenueLine)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                 {revenuePoints.map((p, i) => (
-                  <g key={p.month}>
+                  <g
+                    key={p.month}
+                    tabIndex={0}
+                    role="img"
+                    aria-label={`${p.month}: ₹${p.value} million revenue`}
+                    onMouseEnter={() => setHoveredRevenuePoint(i)}
+                    onMouseLeave={() => setHoveredRevenuePoint(null)}
+                    onFocus={() => setHoveredRevenuePoint(i)}
+                    onBlur={() => setHoveredRevenuePoint(null)}
+                  >
+                    <title>{`${p.month}: ₹${p.value}M`}</title>
+                    <circle className="trend-point-hit-area" cx={p.x} cy={p.y} r="14" />
                     <circle
                       cx={p.x}
                       cy={p.y}
@@ -3406,12 +3634,21 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
                     {i === revenuePoints.length - 1 && (
                       <text x={p.x} y={p.y - 14} textAnchor="middle" className="trend-point-label">{`₹${p.value}M`}</text>
                     )}
+                    {hoveredRevenuePoint === i && (
+                      <g
+                        className="trend-tooltip"
+                        pointerEvents="none"
+                        transform={`translate(${Math.min(Math.max(p.x - 48, 0), revenueChartGeometry.width - 96)}, ${Math.max(p.y - 42, 4)})`}
+                      >
+                        <rect width="96" height="28" />
+                        <text x="48" y="18" textAnchor="middle">{`${p.month}: ₹${p.value}M`}</text>
+                      </g>
+                    )}
                   </g>
                 ))}
               </svg>
             </div>
           </div>
-
           <div className="panel">
             <div className="panel-header">
               <h3>Bookings Trend</h3>
@@ -3464,139 +3701,7 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="panel booking-date-panel" id="booking-date">
-          <div className="panel-header">
-            <div className="booking-date-title">
-              <h3>Bookings by date</h3>
-              <p>Select a date to see every booking scheduled that day.</p>
-            </div>
-            <div className="booking-date-controls">
-              <div className="chip-row">
-                {recentBookingDates.map((option) => (
-                  <button
-                    key={option.iso}
-                    type="button"
-                    className={`chip ${bookingDate === option.iso ? 'active' : ''}`}
-                    onClick={() => setBookingDate(option.iso)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-              <input
-                type="date"
-                className="booking-date-input"
-                value={bookingDate}
-                onChange={(event) => setBookingDate(event.target.value)}
-                aria-label="Filter bookings by date"
-              />
-              <input
-                type="text"
-                className="booking-date-search"
-                value={bookingDateSearch}
-                onChange={(event) => setBookingDateSearch(event.target.value)}
-                placeholder="Search booking ID"
-                aria-label="Search bookings by ID"
-              />
-            </div>
           </div>
-          <div className="chart-wrap">
-            {selectedDateSummary.total > 0 ? (
-              <Fragment>
-                <div className="booking-date-summary">
-                  <div className="booking-date-stat">
-                    <span>Total</span>
-                    <strong>{selectedDateSummary.total}</strong>
-                  </div>
-                  <div className="booking-date-stat">
-                    <span>Completed</span>
-                    <strong className="tone-green">{selectedDateSummary.completed}</strong>
-                  </div>
-                  <div className="booking-date-stat">
-                    <span>Ongoing</span>
-                    <strong className="tone-blue">{selectedDateSummary.ongoing}</strong>
-                  </div>
-                  <div className="booking-date-stat">
-                    <span>Pending</span>
-                    <strong className="tone-amber">{selectedDateSummary.pending}</strong>
-                  </div>
-                  <div className="booking-date-stat">
-                    <span>Cancelled</span>
-                    <strong className="tone-red">{selectedDateSummary.cancelled}</strong>
-                  </div>
-                  <div className="booking-date-stat">
-                    <span>Revenue</span>
-                    <strong>{formatBookingCurrency(selectedDateSummary.revenue)}</strong>
-                  </div>
-                  <div className="booking-date-stat">
-                    <span>Completion</span>
-                    <strong className="tone-green">{selectedDateSummary.completionRate}%</strong>
-                  </div>
-                </div>
-                <div className="booking-date-table-wrap">
-                  <table className="state-table booking-date-table">
-                    <thead>
-                      <tr>
-                        <th>Booking</th>
-                        <th>Customer</th>
-                        <th>Operator</th>
-                        <th>Owner</th>
-                        <th>Equipment</th>
-                        <th>Location</th>
-                        <th>Slot</th>
-                        <th>Duration</th>
-                        <th>Status</th>
-                        <th>Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleDateBookings.map((booking) => (
-                        <tr key={booking.id}>
-                          <td>
-                            <span className="booking-date-id">{booking.id}</span>
-                          </td>
-                          <td>{booking.customer}</td>
-                          <td>{booking.operator}</td>
-                          <td>{booking.owner}</td>
-                          <td>
-                            <div className="booking-date-equip">
-                              <strong>{booking.bookingType}</strong>
-                              <span>{booking.category} · {booking.provider}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="booking-date-equip">
-                              <strong>{booking.city}</strong>
-                              <span>{booking.state} · {booking.zone}</span>
-                            </div>
-                          </td>
-                          <td>{booking.time}</td>
-                          <td>{booking.duration}</td>
-                          <td>
-                            <span className={`booking-date-status ${booking.status.toLowerCase()}`}>{booking.status}</span>
-                          </td>
-                          <td>{formatBookingCurrency(booking.amount)}</td>
-                        </tr>
-                      ))}
-                      {visibleDateBookings.length === 0 && (
-                        <tr>
-                          <td colSpan={10} className="booking-date-no-match">No bookings match “{bookingDateSearch}”.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </Fragment>
-            ) : (
-              <div className="booking-date-empty">
-                No bookings scheduled on {formatDateLabel(bookingDate)}. Choose another date to see its bookings.
-              </div>
-            )}
-          </div>
-        </div>
-
         <div className="stats-grid">
           <div className="panel">
             <div className="panel-header">
@@ -3629,8 +3734,7 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
               </div>
             </div>
           </div>
-
-          <div className="panel">
+            <div className="panel">
             <div className="panel-header">
               <h3>System Health</h3>
               <div className="chip-row">
@@ -3673,6 +3777,82 @@ export default function SuperAdminDashboard({ onSignOut }: SuperAdminDashboardPr
             </div>
           </div>
         </div>
+        </section>
+
+        <section className="dashboard-kpi-section" aria-labelledby="booking-date-heading">
+          <div className="panel booking-date-panel" id="booking-date">
+            <div className="panel-header">
+              <div className="booking-date-title">
+                <h3 id="booking-date-heading">Bookings by date</h3>
+              </div>
+              <div className="booking-date-controls">
+                <input
+                  type="date"
+                  className="booking-date-input"
+                  value={bookingDate}
+                  onChange={(event) => setBookingDate(event.target.value)}
+                  aria-label="Filter bookings by date"
+                />
+                <input
+                  type="text"
+                  className="booking-date-search"
+                  value={bookingDateSearch}
+                  onChange={(event) => setBookingDateSearch(event.target.value)}
+                  placeholder="Search booking ID"
+                  aria-label="Search bookings by ID"
+                />
+              </div>
+            </div>
+            <div className="chart-wrap">
+              {selectedDateSummary.total > 0 ? (
+                <Fragment>
+                  <div className="booking-date-summary">
+                    <div className="booking-date-stat"><span>Total</span><strong>{selectedDateSummary.total}</strong></div>
+                    <div className="booking-date-stat"><span>Completed</span><strong className="tone-green">{selectedDateSummary.completed}</strong></div>
+                    <div className="booking-date-stat"><span>Ongoing</span><strong className="tone-blue">{selectedDateSummary.ongoing}</strong></div>
+                    <div className="booking-date-stat"><span>Pending</span><strong className="tone-amber">{selectedDateSummary.pending}</strong></div>
+                    <div className="booking-date-stat"><span>Cancelled</span><strong className="tone-red">{selectedDateSummary.cancelled}</strong></div>
+                    <div className="booking-date-stat"><span>Revenue</span><strong>{formatBookingCurrency(selectedDateSummary.revenue)}</strong></div>
+                    <div className="booking-date-stat"><span>Completion</span><strong className="tone-green">{selectedDateSummary.completionRate}%</strong></div>
+                  </div>
+                  <div className="booking-date-table-wrap">
+                    <table className="state-table booking-date-table">
+                      <thead>
+                        <tr>
+                          <th>Booking</th><th>Customer</th><th>Operator</th><th>Owner</th><th>Equipment</th>
+                          <th>Location</th><th>Slot</th><th>Duration</th><th>Status</th><th>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleDateBookings.map((booking) => (
+                          <tr key={booking.id}>
+                            <td><span className="booking-date-id">{booking.id}</span></td>
+                            <td>{booking.customer}</td>
+                            <td>{booking.operator}</td>
+                            <td>{booking.owner}</td>
+                            <td><div className="booking-date-equip"><strong>{booking.bookingType}</strong><span>{booking.category} · {booking.provider}</span></div></td>
+                            <td><div className="booking-date-equip"><strong>{booking.city}</strong><span>{booking.state} · {booking.zone}</span></div></td>
+                            <td>{booking.time}</td>
+                            <td>{booking.duration}</td>
+                            <td><span className={`booking-date-status ${booking.status.toLowerCase()}`}>{booking.status}</span></td>
+                            <td>{formatBookingCurrency(booking.amount)}</td>
+                          </tr>
+                        ))}
+                        {visibleDateBookings.length === 0 && (
+                          <tr><td colSpan={10} className="booking-date-no-match">No bookings match “{bookingDateSearch}”.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Fragment>
+              ) : (
+                <div className="booking-date-empty">
+                  No bookings scheduled on {formatDateLabel(bookingDate)}. Choose another date to see its bookings.
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
         <div className="panel">
           <div className="panel-header">

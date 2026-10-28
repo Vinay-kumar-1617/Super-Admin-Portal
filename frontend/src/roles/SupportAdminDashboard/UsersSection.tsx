@@ -5,14 +5,16 @@ import type { Ticket, UserAccount, UserType } from './supportAdminData'
 type UsersSectionProps = {
   users: UserAccount[]
   tickets: Ticket[]
+  selectedUserId: string | null
+  onOpenUser: (id: string) => void
+  onBackToUsers: () => void
 }
 
 const typeFilters: Array<'All' | UserType> = ['All', 'Customer', 'Owner', 'Operator']
 
-export default function UsersSection({ users, tickets }: UsersSectionProps) {
+export default function UsersSection({ users, tickets, selectedUserId, onOpenUser, onBackToUsers }: UsersSectionProps) {
   const [typeFilter, setTypeFilter] = useState<'All' | UserType>('All')
   const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState(users[0]?.id ?? '')
 
   const rows = useMemo(
     () =>
@@ -26,11 +28,12 @@ export default function UsersSection({ users, tickets }: UsersSectionProps) {
     [users, typeFilter, query],
   )
 
-  const selected = users.find((item) => item.id === selectedId) ?? rows[0] ?? users[0]
+  const selected = selectedUserId ? users.find((item) => item.id === selectedUserId) : undefined
   const pastTickets = selected ? tickets.filter((ticket) => ticket.requester === selected.name) : []
 
   return (
     <>
+      {!selectedUserId && (
       <section className="sa-panel">
         <div className="sa-panel-header">
           <h3>User lookup</h3>
@@ -106,8 +109,8 @@ export default function UsersSection({ users, tickets }: UsersSectionProps) {
                       <StatusPill status={user.status} />
                     </td>
                     <td>
-                      <button type="button" className="sa-btn-ghost" onClick={() => setSelectedId(user.id)}>
-                        {user.id === selected?.id ? 'Viewing' : 'View'}
+                      <button type="button" className="sa-btn-ghost" onClick={() => onOpenUser(user.id)}>
+                        View
                       </button>
                     </td>
                   </tr>
@@ -117,12 +120,16 @@ export default function UsersSection({ users, tickets }: UsersSectionProps) {
           </div>
         )}
       </section>
+      )}
 
       {selected && (
         <div className="sa-lower-grid">
           <section className="sa-panel">
             <div className="sa-panel-header">
-              <h3>{selected.name}</h3>
+              <div>
+                <button type="button" className="sa-view-link" onClick={onBackToUsers}>← Back to user lookup</button>
+                <h3 style={{ marginTop: 8 }}>{selected.name}</h3>
+              </div>
               <StatusPill status={selected.status} />
             </div>
             <div className="sp-person-grid">
@@ -209,6 +216,18 @@ export default function UsersSection({ users, tickets }: UsersSectionProps) {
             </div>
           </section>
         </div>
+      )}
+
+      {selectedUserId && !selected && (
+        <section className="sa-panel">
+          <div className="sa-panel-header">
+            <div>
+              <h3>User not found</h3>
+              <span className="sa-panel-sub">This account may no longer be available, or the link may be incorrect.</span>
+            </div>
+            <button type="button" className="sa-btn-ghost" onClick={onBackToUsers}>Back to user lookup</button>
+          </div>
+        </section>
       )}
     </>
   )

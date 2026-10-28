@@ -1,7 +1,8 @@
 import { resultTone, severityTone, type AuditResult, type FindingSeverity } from './auditorData'
 
-export function ResultPill({ result }: { result: AuditResult }) {
-  return <span className={`sa-pill ${resultTone[result]}`}>{result}</span>
+export function ResultPill({ result }: { result: AuditResult | 'Failed' | 'Success' }) {
+  const normalized: AuditResult = result === 'Failed' ? 'Denied' : result === 'Success' ? 'Allowed' : result
+  return <span className={`sa-pill ${resultTone[normalized]}`}>{normalized}</span>
 }
 
 export function SeverityPill({ severity }: { severity: FindingSeverity }) {

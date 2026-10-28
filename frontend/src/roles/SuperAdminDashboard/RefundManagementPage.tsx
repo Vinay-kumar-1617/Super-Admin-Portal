@@ -351,7 +351,7 @@ export default function RefundManagementPage({ onBack }: RefundManagementPagePro
         )
       })
       .sort((a, b) => {
-        let result = 0
+        let result: number
         if (sortKey === 'refundAmount') result = a.refundAmount - b.refundAmount
         else if (sortKey === 'customerName') result = a.customerName.localeCompare(b.customerName)
         else if (sortKey === 'status') result = a.status.localeCompare(b.status)
@@ -482,6 +482,13 @@ export default function RefundManagementPage({ onBack }: RefundManagementPagePro
           min-width: 0;
         }
 
+        .refund-requests-panel > .refund-requests-header {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          align-items: stretch;
+          gap: 14px;
+        }
+
         .kpi-detail-back {
           display: inline-flex;
           align-items: center;
@@ -492,10 +499,10 @@ export default function RefundManagementPage({ onBack }: RefundManagementPagePro
           font: inherit;
           font-size: 0.78rem;
           font-weight: 700;
-          color: #2563eb;
+          color: var(--brand-orange);
           cursor: pointer;
         }
-        .kpi-detail-back:hover { color: #1d4ed8; text-decoration: underline; }
+        .kpi-detail-back:hover { color: #c94310; text-decoration: underline; }
 
         .refund-summary-grid {
           display: grid;
@@ -545,12 +552,17 @@ export default function RefundManagementPage({ onBack }: RefundManagementPagePro
 
         .refund-toolbar {
           display: flex;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
           align-items: center;
           gap: 10px;
+          width: 100%;
+          min-width: 0;
         }
         .refund-search {
-          flex: 1 1 240px;
+          box-sizing: border-box;
+          flex: 1 1 auto;
+          min-width: 0;
+          min-height: 40px;
           padding: 9px 12px;
           border-radius: 10px;
           border: 1px solid rgba(15, 23, 42, 0.14);
@@ -560,6 +572,11 @@ export default function RefundManagementPage({ onBack }: RefundManagementPagePro
           color: var(--text);
         }
         .refund-select {
+          box-sizing: border-box;
+          flex: 0 0 220px;
+          width: 220px;
+          min-width: 0;
+          min-height: 40px;
           padding: 9px 12px;
           border-radius: 10px;
           border: 1px solid rgba(15, 23, 42, 0.14);
@@ -568,6 +585,22 @@ export default function RefundManagementPage({ onBack }: RefundManagementPagePro
           font-size: 0.8rem;
           font-weight: 700;
           color: var(--text);
+        }
+
+        .refund-requests-table th:last-child,
+        .refund-requests-table td:last-child {
+          text-align: center;
+          white-space: nowrap;
+        }
+
+        @media (max-width: 700px) {
+          .refund-select {
+            flex-basis: 150px;
+            width: 150px;
+          }
+          .refund-search {
+            font-size: 0.74rem;
+          }
         }
 
         .refund-th {
@@ -768,9 +801,9 @@ export default function RefundManagementPage({ onBack }: RefundManagementPagePro
           <button type="button" className="kpi-detail-back" onClick={onBack}>
             <span aria-hidden="true">←</span> Dashboard overview
           </button>
-          <p className="header-kicker">Finance / Refund Management</p>
+          
           <h1 className="header-title">Refund Management</h1>
-          <div className="header-breadcrumb">Finance / Refund Management / Dashboard</div>
+         
         </div>
         <span className="chip active">Payments active</span>
       </header>
@@ -782,8 +815,8 @@ export default function RefundManagementPage({ onBack }: RefundManagementPagePro
         {summaryCard('✕', 'Rejected refunds', String(rejectedRefunds.length), 'Denied with reason', 'accent-red', 'Rejected', statusFilter === 'Rejected')}
       </section>
 
-      <section className="panel" aria-labelledby="refund-requests-title">
-        <div className="panel-header">
+      <section className="panel refund-requests-panel" aria-labelledby="refund-requests-title">
+        <div className="panel-header refund-requests-header">
           <div>
             <h3 id="refund-requests-title">Refund requests</h3>
             <span className="health-meta">Showing {filteredRefunds.length} of {refunds.length} requests</span>
@@ -822,7 +855,7 @@ export default function RefundManagementPage({ onBack }: RefundManagementPagePro
         </div>
 
         <div className="chart-wrap kpi-detail-table-wrap">
-          <table className="state-table kpi-detail-table">
+          <table className="state-table kpi-detail-table refund-requests-table">
             <thead>
               <tr>
                 <th className="refund-th" onClick={() => toggleSort('id')}>Refund ID{sortArrow('id')}</th>

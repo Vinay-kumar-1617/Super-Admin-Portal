@@ -75,13 +75,13 @@ export default function NotificationsPage({ notifications, setNotifications, onN
           background: none;
           padding: 0;
           margin-bottom: 4px;
-          color: #2563eb;
+          color: var(--brand-orange);
           font-size: 0.78rem;
           font-weight: 700;
           cursor: pointer;
         }
 
-        .kpi-detail-back:hover { color: #1d4ed8; text-decoration: underline; }
+        .kpi-detail-back:hover { color: #c94310; text-decoration: underline; }
 
         .notifpage-summary {
           display: grid;
@@ -190,9 +190,9 @@ export default function NotificationsPage({ notifications, setNotifications, onN
           <button type="button" className="kpi-detail-back" onClick={onBack}>
             <span aria-hidden="true">←</span> Dashboard overview
           </button>
-          <p className="header-kicker">Support / Notifications</p>
+          
           <h1 className="header-title">Notifications</h1>
-          <div className="header-breadcrumb">Support / Notifications / Platform feed</div>
+          
         </div>
         <span className="chip active">{unread} unread · {notifications.length} total</span>
       </header>
@@ -216,9 +216,7 @@ export default function NotificationsPage({ notifications, setNotifications, onN
         <div className="panel-header">
           <div>
             <h3 id="notifpage-title">Notification feed</h3>
-            <span className="notifpage-toolbar-meta">
-              Pending approvals, overdue tasks, failed payments, escalations, security alerts and platform announcements
-            </span>
+            
           </div>
           <button type="button" className="notifpage-btn" onClick={markAllRead} disabled={unread === 0}>
             Mark all read

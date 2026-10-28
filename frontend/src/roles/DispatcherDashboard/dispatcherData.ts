@@ -7,6 +7,7 @@ import { emailForRole } from '../../auth/roleAccounts'
 export type SectionId =
   | 'overview'
   | 'dispatch'
+  | 'booking-assignments'
   | 'map'
   | 'reassign'
   | 'contact'
@@ -64,6 +65,48 @@ export type DispatchJob = {
   ownerAssigned: boolean
   operatorAccepted: boolean
   map: { x: number; y: number }
+}
+
+export type BookingStatus = 'Confirmed' | 'Pending' | 'Assigned' | 'Scheduled' | 'On Hold'
+
+export type Booking = {
+  id: string
+  bookingId: string
+  customer: string
+  owner: string
+  city: string
+  zone: string
+  requiredType: VehicleType
+  machine?: string
+  quantity: number
+  startDate: string
+  endDate: string
+  startTime: string
+  durationHours: number
+  siteAddress: string
+  priority: 'Urgent' | 'Normal'
+  status: BookingStatus
+  notes?: string
+}
+
+export type Equipment = {
+  id: string
+  machine: string
+  type: VehicleType
+  owner: string
+  zone: string
+  status: 'Available' | 'In Use' | 'Maintenance' | 'Reserved'
+  rate: string
+}
+
+export type AssignmentSlot = {
+  bookingId: string
+  equipmentId: string
+  operatorId: string
+  startDate: string
+  endDate: string
+  startTime: string
+  durationHours: number
 }
 
 export type VehicleType =
@@ -276,6 +319,27 @@ export const dispatchJobs: DispatchJob[] = [
   { id: 'JOB-7798', bookingId: 'BK-5176', customer: 'My Home Builders', owner: 'Twin Cities Liftways', city: 'Hyderabad', zone: 'Kukatpally', machine: 'Schwing Stetter Mixer', requiredType: 'Concrete Mixer', priority: 'Normal', status: 'In Progress', requested: '09:44', waiting: 73, sla: 45, operator: 'Rakesh Naidu', operatorId: 'OP-103', ownerAssigned: true, operatorAccepted: true, map: { x: 42, y: 24 } },
   { id: 'JOB-7788', bookingId: 'BK-5168', customer: 'TSIIC', owner: 'Deccan Heavy Machinery', city: 'Hyderabad', zone: 'Begumpet', machine: 'Motor Grader MG-180', requiredType: 'Motor Grader', priority: 'Normal', status: 'In Progress', requested: '08:58', waiting: 119, sla: 45, operator: 'Venkat Rao', operatorId: 'OP-106', ownerAssigned: true, operatorAccepted: true, map: { x: 58, y: 46 } },
   { id: 'JOB-7790', bookingId: 'BK-5173', customer: 'Ramky Infrastructure', owner: 'Charminar Plant Hire', city: 'Hyderabad', zone: 'Uppal', machine: 'Volvo FMX Tipper', requiredType: 'Tipper', priority: 'Urgent', status: 'Stuck', requested: '09:05', waiting: 112, sla: 30, operator: 'Imran Ali', operatorId: 'OP-105', ownerAssigned: true, operatorAccepted: true, map: { x: 72, y: 62 } },
+]
+
+export const confirmedBookings: Booking[] = [
+  { id: 'BKNG-9001', bookingId: 'BK-5200', customer: 'HCC Constructions', owner: 'Charminar Plant Hire', city: 'Hyderabad', zone: 'Madhapur', requiredType: 'Crane', quantity: 1, startDate: '2026-10-27', endDate: '2026-10-28', startTime: '09:00', durationHours: 8, siteAddress: 'Cyber Towers, Madhapur', priority: 'Urgent', status: 'Confirmed', notes: 'Need certified operator for lift' },
+  { id: 'BKNG-9002', bookingId: 'BK-5201', customer: 'Aurobindo Realty', owner: 'Deccan Heavy Machinery', city: 'Hyderabad', zone: 'Gachibowli', requiredType: 'Excavator', quantity: 1, startDate: '2026-10-27', endDate: '2026-10-27', startTime: '08:30', durationHours: 6, siteAddress: 'ORR Junction, Gachibowli', priority: 'Normal', status: 'Confirmed' },
+  { id: 'BKNG-9003', bookingId: 'BK-5202', customer: 'Vascon Engineers', owner: 'Twin Cities Liftways', city: 'Hyderabad', zone: 'Kukatpally', requiredType: 'Backhoe Loader', quantity: 1, startDate: '2026-10-28', endDate: '2026-10-29', startTime: '07:30', durationHours: 10, siteAddress: 'KPHB Colony, Kukatpally', priority: 'Normal', status: 'Confirmed' },
+  { id: 'BKNG-9004', bookingId: 'BK-5203', customer: 'My Home Builders', owner: 'Charminar Plant Hire', city: 'Hyderabad', zone: 'Uppal', requiredType: 'Tipper', quantity: 2, startDate: '2026-10-27', endDate: '2026-10-27', startTime: '10:00', durationHours: 5, siteAddress: 'Uppal Ring Road, Uppal', priority: 'Urgent', status: 'Pending' },
+]
+
+export const equipmentFleet: Equipment[] = [
+  { id: 'EQ-201', machine: 'Tower Crane 6T', type: 'Crane', owner: 'Charminar Plant Hire', zone: 'Madhapur', status: 'Available', rate: '₹8500/hr' },
+  { id: 'EQ-202', machine: 'Liebherr LTM 1055', type: 'Crane', owner: 'Twin Cities Liftways', zone: 'Gachibowli', status: 'Available', rate: '₹12000/hr' },
+  { id: 'EQ-301', machine: 'CAT 320 Excavator', type: 'Excavator', owner: 'Deccan Heavy Machinery', zone: 'Gachibowli', status: 'Available', rate: '₹5500/hr' },
+  { id: 'EQ-302', machine: 'Komatsu PC210', type: 'Excavator', owner: 'Charminar Plant Hire', zone: 'Begumpet', status: 'In Use', rate: '₹5200/hr' },
+  { id: 'EQ-401', machine: 'JCB 3DX Backhoe Loader', type: 'Backhoe Loader', owner: 'Twin Cities Liftways', zone: 'Kukatpally', status: 'Available', rate: '₹2800/hr' },
+  { id: 'EQ-501', machine: 'Volvo FMX Tipper', type: 'Tipper', owner: 'Charminar Plant Hire', zone: 'Uppal', status: 'Available', rate: '₹2200/hr' },
+  { id: 'EQ-502', machine: 'Ashok Leyland Tipper', type: 'Tipper', owner: 'Deccan Heavy Machinery', zone: 'Bodhan Road', status: 'Reserved', rate: '₹2000/hr' },
+]
+
+export const assignmentSlots: AssignmentSlot[] = [
+  { bookingId: 'BK-5201', equipmentId: 'EQ-301', operatorId: 'OP-102', startDate: '2026-10-27', endDate: '2026-10-27', startTime: '08:30', durationHours: 6 },
 ]
 
 export const dispatcherOperators: DispatcherOperator[] = [

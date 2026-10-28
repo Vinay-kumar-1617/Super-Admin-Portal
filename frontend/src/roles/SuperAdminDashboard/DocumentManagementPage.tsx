@@ -1,15 +1,5 @@
 import { useState } from 'react'
-
-export const documentSections = [
-  'Vehicle Documents',
-  'Driver Documents',
-  'Owner Documents',
-  'GST & Tax Documents',
-  'Verification & Expiry Tracking',
-  'Document History',
-] as const
-
-export type DocumentSection = (typeof documentSections)[number]
+import { documentSections, type DocumentSection } from './documentSections'
 
 type DocVerificationStatus = 'Pending' | 'Approved' | 'Rejected'
 
@@ -18,10 +8,6 @@ type DocumentManagementPageProps = {
   onNavigate: (section: DocumentSection) => void
   onBack: () => void
 }
-
-const showAll = (section: DocumentManagementPageProps['section']) => section === 'all'
-
-const sectionNumber = (item: DocumentSection) => String(documentSections.indexOf(item) + 1)
 
 const vehicleDocs = [
   { reg: 'TS 09 HR 4521', vehicle: 'Backhoe Loader', owner: 'Deccan Heavy Machinery', rc: 'Valid', insurance: '18 Dec 2026', puc: '05 Nov 2026', fitness: 'Valid', permit: '31 Mar 2027', status: 'Compliant' },
@@ -88,6 +74,7 @@ const docHistory = [
 ]
 
 export default function DocumentManagementPage({ section, onNavigate, onBack }: DocumentManagementPageProps) {
+  const activeSection: DocumentSection = section === 'all' ? 'Vehicle Documents' : section
   const [vehicleFilter, setVehicleFilter] = useState<string>('All')
   const [driverFilter, setDriverFilter] = useState<string>('All')
   const [ownerFilter, setOwnerFilter] = useState<string>('All')
@@ -121,7 +108,6 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
     <article className={`doc-card ${accent}`}>
       <span className="doc-card-top"><span className="doc-card-icon">{icon}</span><span>{label}</span></span>
       <strong>{value}</strong>
-      <small>Sample document data</small>
     </article>
   )
 
@@ -140,31 +126,11 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
           gap: 8px;
         }
 
-        .doc-all-intro {
-          margin: 0;
-          color: var(--muted);
-          font-size: 0.8rem;
-        }
-
         .doc-section-heading {
-          display: flex;
-          align-items: center;
-          gap: 10px;
           margin: 0;
           font-size: 1rem;
           letter-spacing: -0.01em;
           color: var(--text);
-        }
-        .doc-section-no {
-          display: inline-grid;
-          place-items: center;
-          width: 24px;
-          height: 24px;
-          border-radius: 8px;
-          font-size: 0.74rem;
-          font-weight: 800;
-          background: linear-gradient(135deg, #2563eb, #1e40af);
-          color: #fff;
         }
 
         .doc-tabs .doc-tab {
@@ -177,8 +143,8 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
           color: #475569;
           cursor: pointer;
         }
-        .doc-tabs .doc-tab:hover { border-color: rgba(37, 99, 235, 0.4); color: #1d4ed8; }
-        .doc-tabs .doc-tab.active { background: linear-gradient(135deg, #2563eb, #1e40af); color: #fff; border-color: transparent; box-shadow: 0 10px 22px -10px rgba(37, 99, 235, 0.7); }
+        .doc-tabs .doc-tab:hover { border-color: rgba(255, 107, 44, 0.4); color: #c94310; }
+        .doc-tabs .doc-tab.active { background: linear-gradient(135deg, var(--brand-orange), var(--brand-orange-deep)); color: #fff; border-color: transparent; box-shadow: 0 10px 22px -10px rgba(239, 74, 18, 0.7); }
 
         .doc-summary-grid {
           display: grid;
@@ -253,10 +219,10 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
           font: inherit;
           font-size: 0.78rem;
           font-weight: 700;
-          color: #2563eb;
+          color: var(--brand-orange);
           cursor: pointer;
         }
-        .kpi-detail-back:hover { color: #1d4ed8; text-decoration: underline; }
+        .kpi-detail-back:hover { color: #c94310; text-decoration: underline; }
 
         .operator-record-details {
           max-width: 280px;
@@ -297,7 +263,7 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
         .doc-review-btn.reject:hover { border-color: rgba(220, 38, 38, 0.5); color: #dc2626; }
         .doc-review-btn.approve.active { background: rgba(8, 166, 108, 0.12); border-color: rgba(8, 166, 108, 0.5); color: #078653; }
         .doc-review-btn.reject.active { background: rgba(220, 38, 38, 0.12); border-color: rgba(220, 38, 38, 0.5); color: #dc2626; }
-        .doc-review-btn:focus-visible { outline: 3px solid rgba(37, 99, 235, 0.4); outline-offset: 2px; }
+        .doc-review-btn:focus-visible { outline: 3px solid rgba(255, 107, 44, 0.4); outline-offset: 2px; }
       `}</style>
 
       <header className="dashboard-header">
@@ -305,9 +271,9 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
           <button type="button" className="kpi-detail-back" onClick={onBack}>
             <span aria-hidden="true">←</span> Dashboard overview
           </button>
-          <p className="header-kicker">Compliance / Document Management</p>
-          <h1 className="header-title">{section === 'all' ? 'Document Management' : section}</h1>
-          <div className="header-breadcrumb">Compliance / Document Management / {section === 'all' ? 'All features' : section}</div>
+          
+          <h1 className="header-title">{activeSection}</h1>
+        
         </div>
         <span className="chip active">Docs synced</span>
       </header>
@@ -317,8 +283,8 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
           <button
             key={item}
             type="button"
-            className={`doc-tab ${section === item ? 'active' : ''}`}
-            aria-current={section === item ? 'location' : undefined}
+            className={`doc-tab ${activeSection === item ? 'active' : ''}`}
+            aria-current={activeSection === item ? 'location' : undefined}
             onClick={() => onNavigate(item)}
           >
             {item}
@@ -326,13 +292,9 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
         ))}
       </nav>
 
-      {section === 'all' && (
-        <p className="doc-all-intro">All document management features in one view. Use the tabs above to jump to an individual feature.</p>
-      )}
-
-      {(section === 'Vehicle Documents' || showAll(section)) && (
+      {activeSection === 'Vehicle Documents' && (
         <>
-          <h2 className="doc-section-heading"><span className="doc-section-no">{sectionNumber('Vehicle Documents')}</span> Vehicle Documents</h2>
+          <h2 className="doc-section-heading">Vehicle Documents</h2>
           <div className="doc-summary-grid doc-summary-three">
             {docCard('▤', 'Vehicles tracked', String(vehicleDocs.length), 'accent-slate')}
             {docCard('✓', 'Fully compliant', String(vehicleDocs.filter((row) => row.status === 'Compliant').length), 'accent-green')}
@@ -377,14 +339,14 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
                 </tbody>
               </table>
             </div>
-            <p className="doc-note">Illustrative vehicle document records; keep RC, Insurance, PUC, Fitness Certificate and Permits up to date for every asset.</p>
+            <p className="doc-note">Keep RC, Insurance, PUC, Fitness Certificate and Permits up to date for every asset.</p>
           </section>
         </>
       )}
 
-      {(section === 'Driver Documents' || showAll(section)) && (
+      {activeSection === 'Driver Documents' && (
         <>
-          <h2 className="doc-section-heading"><span className="doc-section-no">{sectionNumber('Driver Documents')}</span> Driver Documents</h2>
+          <h2 className="doc-section-heading">Driver Documents</h2>
           <div className="doc-summary-grid doc-summary-three">
             {docCard('▤', 'Drivers', String(driverDocs.length), 'accent-slate')}
             {docCard('✓', 'DL verified', String(driverDocs.filter((row) => row.status === 'Verified').length), 'accent-green')}
@@ -427,14 +389,14 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
                 </tbody>
               </table>
             </div>
-            <p className="doc-note">Illustrative driving licence records; verify DL validity before assigning a driver to a vehicle.</p>
+            <p className="doc-note">Verify DL validity before assigning a driver to a vehicle.</p>
           </section>
         </>
       )}
 
-      {(section === 'Owner Documents' || showAll(section)) && (
+      {activeSection === 'Owner Documents' && (
         <>
-          <h2 className="doc-section-heading"><span className="doc-section-no">{sectionNumber('Owner Documents')}</span> Owner Documents</h2>
+          <h2 className="doc-section-heading">Owner Documents</h2>
           <div className="doc-summary-grid doc-summary-three">
             {docCard('▤', 'Owners', String(ownerDocs.length), 'accent-slate')}
             {docCard('✓', 'Complete set', String(ownerDocs.filter((row) => row.status === 'Complete').length), 'accent-green')}
@@ -475,14 +437,14 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
                 </tbody>
               </table>
             </div>
-            <p className="doc-note">Illustrative owner document records covering ID proof, address proof and business documents.</p>
+            <p className="doc-note">Owner document records cover ID proof, address proof and business documents.</p>
           </section>
         </>
       )}
 
-      {(section === 'GST & Tax Documents' || showAll(section)) && (
+      {activeSection === 'GST & Tax Documents' && (
         <>
-          <h2 className="doc-section-heading"><span className="doc-section-no">{sectionNumber('GST & Tax Documents')}</span> GST & Tax Documents</h2>
+          <h2 className="doc-section-heading">GST & Tax Documents</h2>
           <div className="doc-summary-grid doc-summary-three">
             {docCard('▤', 'Documents on file', String(taxDocs.length), 'accent-slate')}
             {docCard('✓', 'Filed / on file', String(taxDocs.filter((row) => row.status !== 'Pending').length), 'accent-green')}
@@ -524,14 +486,14 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
                 </tbody>
               </table>
             </div>
-            <p className="doc-note">Illustrative GST & tax document store; retains registration certificates, returns and tax references.</p>
+            <p className="doc-note">GST & tax document store retains registration certificates, returns and tax references.</p>
           </section>
         </>
       )}
 
-      {(section === 'Verification & Expiry Tracking' || showAll(section)) && (
+      {activeSection === 'Verification & Expiry Tracking' && (
         <>
-          <h2 className="doc-section-heading"><span className="doc-section-no">{sectionNumber('Verification & Expiry Tracking')}</span> Verification & Expiry Tracking</h2>
+          <h2 className="doc-section-heading">Verification & Expiry Tracking</h2>
           <div className="doc-summary-grid doc-summary-three">
             {docCard('⚠', 'Expired', String(expiries.filter((row) => row.daysLeft === 'Expired').length), 'accent-red')}
             {docCard('⏳', 'Expiring in 30 days', String(expiries.filter((row) => row.daysLeft !== 'Expired' && row.daysLeft !== 'Due today').length), 'accent-orange')}
@@ -598,13 +560,13 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
               </div>
             </section>
           </div>
-          <p className="doc-note">Illustrative expiry and verification tracking; renewal alerts fire as documents approach their due date.</p>
+          <p className="doc-note">Expiry and verification tracking; renewal alerts fire as documents approach their due date.</p>
         </>
       )}
 
-      {(section === 'Document History' || showAll(section)) && (
+      {activeSection === 'Document History' && (
         <>
-          <h2 className="doc-section-heading"><span className="doc-section-no">{sectionNumber('Document History')}</span> Document History</h2>
+          <h2 className="doc-section-heading">Document History</h2>
           <div className="doc-summary-grid doc-summary-three">
             {docCard('▤', 'Total events', String(history.length), 'accent-slate')}
             {docCard('✓', 'Verified / renewed', String(history.filter((event) => event.action === 'Verified' || event.action === 'Renewed').length), 'accent-green')}
@@ -635,7 +597,6 @@ export default function DocumentManagementPage({ section, onNavigate, onBack }: 
                 </tbody>
               </table>
             </div>
-            <p className="doc-note">Illustrative document history for interface preview; entries are sample events.</p>
           </section>
         </>
       )}

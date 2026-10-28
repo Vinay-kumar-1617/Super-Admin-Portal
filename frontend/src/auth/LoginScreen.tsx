@@ -101,7 +101,7 @@ export default function LoginScreen({ onLogin, onDemoLogin, onClose }: LoginScre
         </form>
 
         <div className="dummy-accounts">
-          <p>{canPreviewRoles ? 'Development role previews' : 'Sample staff emails'}</p>
+          <p>{canPreviewRoles ? 'Development role previews' : 'Staff emails'}</p>
           <div className="account-grid">
             {roleAccounts.map((account) => (
               <button

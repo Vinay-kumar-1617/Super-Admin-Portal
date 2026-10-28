@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { commandCenterStyles } from './commandCenterStyles'
+import RoleHeaderMenus from './RoleHeaderMenus'
 
 type DashboardStat = {
   label: string
@@ -41,6 +43,19 @@ export default function DashboardShell({
   onSignOut,
 }: DashboardShellProps) {
   const initials = initialsFor(title)
+  const [activeNav, setActiveNav] = useState('overview')
+  const [query, setQuery] = useState('')
+  const normalizedQuery = query.trim().toLowerCase()
+  const searchItems = [
+    { label: 'Overview', detail: `${stats.length} dashboard metrics`, section: 'overview' },
+    ...actions.map((label) => ({ label, detail: 'Priority action', section: 'priority-actions' })),
+    ...scope.map((label) => ({ label, detail: 'Authority scope', section: 'authority-scope' })),
+  ].filter((item) => normalizedQuery && `${item.label} ${item.detail}`.toLowerCase().includes(normalizedQuery))
+
+  const navigateToSection = (section: string) => {
+    document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setActiveNav(section)
+  }
 
   return (
     <section className="stateadmin-role-dashboard">
@@ -56,13 +71,21 @@ export default function DashboardShell({
         </div>
 
         <div>
-          <div className="sa-sidebar-label">Console</div>
+          <div className="sa-sidebar-label">Fleet operations</div>
           <ul className="sa-nav">
-            {stats.map((stat, index) => (
-              <li key={stat.label}>
-                <button type="button" className={`sa-nav-item ${index === 0 ? 'active' : ''}`}>
-                  <span>{stat.label}</span>
-                  <span className="sa-nav-badge">{stat.value}</span>
+            {[
+              { id: 'overview', label: 'Overview' },
+              { id: 'priority-actions', label: 'Priority actions' },
+              { id: 'authority-scope', label: 'Authority scope' },
+            ].map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className={`sa-nav-item ${activeNav === item.id ? 'active' : ''}`}
+                  aria-current={activeNav === item.id ? 'page' : undefined}
+                  onClick={() => navigateToSection(item.id)}
+                >
+                  <span>{item.label}</span>
                 </button>
               </li>
             ))}
@@ -80,9 +103,6 @@ export default function DashboardShell({
             <strong>{subtitle}</strong>
             <span>{title} access</span>
           </div>
-          <button type="button" className="sa-signout" onClick={onSignOut}>
-            Logout
-          </button>
         </div>
       </aside>
 
@@ -96,14 +116,48 @@ export default function DashboardShell({
 
           <div className="header-actions">
             <div className="header-toolbar" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div className="header-avatar">{initials}</div>
-              <button type="button" className="org-button" onClick={onSignOut}>Logout</button>
+              <div className="header-search-wrapper">
+                <input
+                  className="header-search"
+                  aria-label="Search dashboard"
+                  placeholder="Search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                {normalizedQuery && (
+                  <div className="header-search-results" role="listbox" aria-label="Search results">
+                    {searchItems.length > 0 ? searchItems.map((item) => (
+                      <button
+                        key={`${item.section}-${item.label}`}
+                        type="button"
+                        className="search-result-item"
+                        onClick={() => {
+                          setQuery('')
+                          navigateToSection(item.section)
+                        }}
+                      >
+                        <strong>{item.label}</strong>
+                        <span className="search-result-sub">{item.detail}</span>
+                      </button>
+                    )) : <div className="header-feed-empty">No matching dashboard items.</div>}
+                  </div>
+                )}
+              </div>
+              <RoleHeaderMenus
+                notifications={[]}
+                alerts={[]}
+                initials={initials}
+                onNotificationClick={() => undefined}
+                onAlertClick={() => undefined}
+                onMarkAllRead={() => undefined}
+                onSignOut={onSignOut}
+              />
             </div>
           </div>
         </header>
 
         <div className="sa-content">
-          <div className="sa-kpi-grid">
+          <div className="sa-kpi-grid" id="overview">
             {stats.map((stat) => (
               <div key={stat.label} className={`sa-kpi-card ${toneMap[stat.tone ?? 'primary']}`}>
                 <div className="sa-kpi-top">
@@ -116,7 +170,7 @@ export default function DashboardShell({
           </div>
 
           <div className="sa-lower-grid">
-            <section className="sa-panel">
+            <section className="sa-panel" id="priority-actions">
               <div className="sa-panel-header">
                 <h3>Priority actions</h3>
                 <span className="sa-panel-sub">{title} workspace</span>
@@ -130,7 +184,7 @@ export default function DashboardShell({
               </div>
             </section>
 
-            <section className="sa-panel">
+            <section className="sa-panel" id="authority-scope">
               <div className="sa-panel-header">
                 <h3>Authority scope</h3>
                 <span className="sa-panel-sub">{summary}</span>

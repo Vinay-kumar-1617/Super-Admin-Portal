@@ -1,15 +1,15 @@
 :root {
-  --bg: #f5f2ee;
-  --panel: #ffffff;
-  --panel-soft: #f7f3ef;
-  --text: #111827;
-  --muted: #4b5563;
-  --muted-strong: #1f2937;
-  --line: rgba(17, 24, 39, 0.08);
-  --accent: #ff6b2c;
-  --accent-deep: #ef4a12;
-  --accent-soft: rgba(255, 107, 44, 0.1);
-  --shadow: 0 30px 80px rgba(15, 18, 20, 0.08);
+  --bg: var(--background);
+  --panel: var(--surface);
+  --panel-soft: var(--surface-elevated);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --muted-strong: var(--text-primary);
+  --line: var(--surface-border);
+  --accent: var(--primary);
+  --accent-deep: var(--primary-dark);
+  --accent-soft: color-mix(in srgb, var(--primary) 12%, transparent);
+  --shadow: var(--shadow-lg);
 }
 
 * {
@@ -24,7 +24,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Avenir Next', 'Segoe UI', sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 button,
@@ -44,14 +44,204 @@ img {
 }
 
 .revv-app {
+  --page-bg: var(--background);
+  --sidebar-bg: #101827;
+  --card-bg: var(--surface);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --line: var(--surface-border);
+  --green: var(--success);
+  --green-soft: var(--success-bg);
+  --blue: var(--info);
+  --blue-soft: var(--info-bg);
+  --purple: var(--admin-accent);
+  --purple-soft: color-mix(in srgb, var(--admin-accent) 14%, transparent);
+  --orange: var(--emphasis);
+  --orange-soft: var(--warning-bg);
+  --red: var(--error);
+  --red-soft: var(--error-bg);
+  --amber: var(--emphasis);
+  --brand-orange: var(--primary);
+  --brand-orange-deep: var(--primary-dark);
+  --shadow: var(--shadow-md);
   min-height: 100vh;
-  background: linear-gradient(180deg, #f8f4f0 0%, #f2efe9 100%);
+  background: var(--background);
 }
 
 .container {
   width: min(1180px, calc(100% - 48px));
   margin: 0 auto;
 }
+
+/* Shared design tokens and component baseline for every role workspace. */
+.revv-app {
+  --brand-orange: var(--primary);
+  --sa-page-bg: var(--background);
+  --sa-card-bg: var(--surface);
+  --sa-line: var(--surface-border);
+  --sa-text: var(--text-primary);
+  --sa-muted: var(--text-secondary);
+  --sa-brand: var(--primary);
+  --sa-brand-deep: var(--primary-dark);
+  --sa-green: var(--success);
+  --sa-green-soft: var(--success-bg);
+  --sa-blue: var(--info);
+  --sa-blue-soft: var(--info-bg);
+  --sa-purple: var(--admin-accent);
+  --sa-purple-soft: color-mix(in srgb, var(--admin-accent) 14%, transparent);
+  --sa-orange: var(--emphasis);
+  --sa-orange-soft: var(--warning-bg);
+  --sa-red: var(--error);
+  --sa-red-soft: var(--error-bg);
+  color: var(--text-primary);
+  background: var(--background);
+  min-height: 100vh;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+.stateadmin-role-dashboard,
+.superadmin-role-dashboard { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+.stateadmin-role-dashboard .sa-panel,
+.stateadmin-role-dashboard .sa-kpi-card,
+.stateadmin-role-dashboard .sa-table-wrap,
+.stateadmin-role-dashboard .sa-toolbar,
+.superadmin-role-dashboard .sa-panel,
+.superadmin-role-dashboard .sa-kpi-card,
+.superadmin-role-dashboard .sa-table-wrap,
+.superadmin-role-dashboard .sa-toolbar,
+.superadmin-role-dashboard .metric-card,
+.superadmin-role-dashboard .page-card,
+.superadmin-role-dashboard .states-header,
+.superadmin-role-dashboard .states-toolbar,
+.superadmin-role-dashboard .states-stat-card {
+  background-color: var(--surface) !important;
+  border-color: var(--surface-border) !important;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+:is(.stateadmin-role-dashboard, .superadmin-role-dashboard) :is(
+  [class*="-card"]:not([class*="backdrop"]), [class*="-panel"]:not([class*="backdrop"]),
+  [class*="-table-wrap"], [class*="-toolbar"], [class*="-popover"]:not([class*="backdrop"]),
+  [class*="-modal"]:not([class*="backdrop"]), [class*="-dialog"]:not([class*="backdrop"]), [class*="-filter"]:not([class*="backdrop"])
+) {
+  background-color: var(--surface) !important;
+  border-color: var(--surface-border) !important;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Keep KPI hover and keyboard focus behavior consistent across role dashboards. */
+:is(.stateadmin-role-dashboard, .superadmin-role-dashboard) :is(
+  .sa-kpi-card, .kpi-card, [class*="-kpi-card"], .kpi-detail-summary-card,
+  .states-stat-card, .sa-stat-card, .um-stat
+) {
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+:is(.stateadmin-role-dashboard, .superadmin-role-dashboard) :is(
+  .sa-kpi-card, .kpi-card, [class*="-kpi-card"], .kpi-detail-summary-card,
+  .states-stat-card, .sa-stat-card, .um-stat
+):hover {
+  transform: translateY(-2px) !important;
+  border-color: color-mix(in srgb, var(--primary) 48%, var(--surface-border)) !important;
+  box-shadow: 0 18px 30px color-mix(in srgb, var(--text-primary) 12%, transparent) !important;
+}
+
+:is(.stateadmin-role-dashboard, .superadmin-role-dashboard) :is(
+  .sa-kpi-card, .kpi-card, [class*="-kpi-card"], .kpi-detail-summary-card,
+  .states-stat-card, .sa-stat-card, .um-stat
+):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 55%, transparent) !important;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.stateadmin-role-dashboard, .superadmin-role-dashboard) :is(
+    .sa-kpi-card, .kpi-card, [class*="-kpi-card"], .kpi-detail-summary-card,
+    .states-stat-card, .sa-stat-card, .um-stat
+  ) { transition: none; }
+  :is(.stateadmin-role-dashboard, .superadmin-role-dashboard) :is(
+    .sa-kpi-card, .kpi-card, [class*="-kpi-card"], .kpi-detail-summary-card,
+    .states-stat-card, .sa-stat-card, .um-stat
+  ):hover { transform: none !important; }
+}
+
+:is(.stateadmin-role-dashboard, .superadmin-role-dashboard) :is(h1, h2, h3, h4, [class*="-title"], [class*="-value"]) {
+  color: var(--text-primary) !important;
+}
+
+:is(.stateadmin-role-dashboard, .superadmin-role-dashboard) :is(table, th, td) {
+  border-color: var(--surface-border);
+  color: var(--text-secondary);
+}
+:is(.stateadmin-role-dashboard, .superadmin-role-dashboard) th { background: var(--surface-elevated); color: var(--text-secondary); }
+:is(.stateadmin-role-dashboard, .superadmin-role-dashboard) tbody tr:hover td { background: var(--surface-elevated); }
+
+.stateadmin-role-dashboard .sa-main,
+.superadmin-role-dashboard .superadmin-main,
+.stateadmin-role-dashboard .sa-content,
+.superadmin-role-dashboard .dashboard-content { color: var(--text-primary); }
+
+.stateadmin-role-dashboard .sa-panel h1,
+.stateadmin-role-dashboard .sa-panel h2,
+.stateadmin-role-dashboard .sa-panel h3,
+.stateadmin-role-dashboard .sa-kpi-value,
+.superadmin-role-dashboard .sa-panel h1,
+.superadmin-role-dashboard .sa-panel h2,
+.superadmin-role-dashboard .sa-panel h3,
+.superadmin-role-dashboard .sa-kpi-value,
+.superadmin-role-dashboard .states-header-copy h2,
+.superadmin-role-dashboard .states-stat-value { color: var(--text-primary) !important; }
+
+.stateadmin-role-dashboard input,
+.stateadmin-role-dashboard select,
+.stateadmin-role-dashboard textarea,
+.superadmin-role-dashboard input,
+.superadmin-role-dashboard select,
+.superadmin-role-dashboard textarea {
+  color: var(--text-primary);
+  background-color: var(--surface);
+  border-color: var(--surface-border);
+}
+
+.stateadmin-role-dashboard button,
+.superadmin-role-dashboard button { font-family: inherit; }
+
+.theme-switcher {
+  min-height: 36px; padding: 0 10px; border: 1px solid var(--surface-border);
+  border-radius: 10px; color: var(--text-secondary); background: var(--surface);
+  font: inherit; font-size: .75rem; font-weight: 700; cursor: pointer;
+}
+.theme-switcher:hover { color: var(--primary); border-color: var(--primary); }
+
+.site-header { background: color-mix(in srgb, var(--background) 88%, transparent); border-color: var(--surface-border); }
+.main-nav a, .nav-dropdown-toggle { color: var(--text-primary); }
+.nav-dropdown-menu, .hero-card, .booking-strip, .fleet-card, .feature-card, .process-card,
+.dashboard-panel, .login-card, .demo-account, .booking-modal {
+  background: var(--surface);
+  border-color: var(--surface-border);
+  color: var(--text-primary);
+}
+.hero-copy, .booking-header, .section-heading, .account-section, .login-header { color: var(--text-primary); }
+.mini-stats div, .price-tag, .booking-form select, .field-block input, .login-close,
+.fleet-action, .secondary-btn {
+  background: var(--surface-elevated);
+  border-color: var(--surface-border);
+  color: var(--text-primary);
+}
+.demo-account:hover { border-color: var(--primary); background: var(--surface-elevated); }
+.nav-dropdown-item { color: var(--text-secondary); }
+.nav-dropdown-item:hover { background: color-mix(in srgb, var(--primary) 10%, var(--surface)); }
+.login-error { background: var(--error-bg); border-color: color-mix(in srgb, var(--error) 24%, transparent); color: var(--error); }
+.primary-btn, .header-cta { color: var(--text-inverse); }
+.stateadmin-role-dashboard :is(.sa-btn.primary, .sa-btn.approve, .sa-btn.reject, .sa-btn.danger, .btn-primary, .btn-danger),
+.superadmin-role-dashboard :is(.sa-btn.primary, .sa-btn.approve, .sa-btn.reject, .sa-btn.danger, .btn-primary, .btn-danger) {
+  color: var(--text-inverse) !important;
+}
+.feature-icon { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); }
+.step-index { background: var(--surface-elevated); color: var(--primary); }
 
 .site-header {
   position: sticky;
@@ -602,13 +792,18 @@ img {
 .login-shell {
   display: grid;
   place-items: center;
-  padding: 30px 20px;
+  width: 100%;
+  min-width: 0;
+  padding: clamp(16px, 3vh, 30px) clamp(16px, 3vw, 24px);
 }
 
 .login-card {
   position: relative;
-  width: min(980px, 100%);
-  padding: 32px 28px;
+  width: min(1120px, 100%);
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  padding: clamp(20px, 3vw, 32px) clamp(18px, 3vw, 28px);
   border: 1px solid rgba(17, 24, 39, 0.08);
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.96);
@@ -733,6 +928,27 @@ img {
   cursor: pointer;
 }
 
+@media (max-width: 600px) {
+  .login-shell {
+    padding: 12px;
+  }
+
+  .login-card {
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 20px;
+  }
+
+  .login-header h1 {
+    font-size: clamp(1.8rem, 8vw, 2.4rem);
+  }
+
+  .account-grid {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: 240px;
+  }
+}
+
 .booking-overlay {
   position: fixed;
   inset: 0;
@@ -829,7 +1045,6 @@ img {
   color: var(--muted);
   font-size: 0.94rem;
 }
-
 
 
 

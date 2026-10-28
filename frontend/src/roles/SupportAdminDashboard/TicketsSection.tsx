@@ -7,11 +7,19 @@ import {
   type TicketCategory,
   type TicketPriority,
   type TicketStatus,
+  type RequesterType,
 } from './supportAdminData'
 
-type TicketsSectionProps = {
+export type TicketsSectionProps = {
   tickets: Ticket[]
   savedReplies: SavedReply[]
+  openedTicketId: string | null
+  onOpenTicket: (id: string) => void
+  onBackToQueue: () => void
+  requesterType?: RequesterType
+  queueTitle?: string
+  queueFilter?: QueueKpiFilter | null
+  onClearQueueFilter?: () => void
   onAssign: (id: string, agent: string) => void
   onPriority: (id: string, priority: TicketPriority) => void
   onCategory: (id: string, category: TicketCategory) => void
@@ -22,13 +30,23 @@ type TicketsSectionProps = {
   onLinkBooking: (id: string, booking: string) => void
 }
 
+export type QueueKpiFilter = 'active' | 'urgent' | 'unassigned' | 'overdue'
+
 const statusFilters: Array<'All' | TicketStatus> = ['All', 'New', 'Open', 'Pending', 'Resolved', 'Closed']
 const priorities: TicketPriority[] = ['Urgent', 'High', 'Normal', 'Low']
 const categories: TicketCategory[] = ['Booking', 'Payment', 'Operator', 'Equipment', 'Account', 'Refund']
+const isActive = (ticket: Ticket) => ticket.status === 'New' || ticket.status === 'Open' || ticket.status === 'Pending'
 
 export default function TicketsSection({
   tickets,
   savedReplies,
+  openedTicketId,
+  onOpenTicket,
+  onBackToQueue,
+  requesterType,
+  queueTitle = 'Ticket queue',
+  queueFilter = null,
+  onClearQueueFilter,
   onAssign,
   onPriority,
   onCategory,
@@ -42,7 +60,6 @@ export default function TicketsSection({
   const [categoryFilter, setCategoryFilter] = useState<'All' | TicketCategory>('All')
   const [assigneeFilter, setAssigneeFilter] = useState('All')
   const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState(tickets[0]?.id ?? '')
   const [replyBody, setReplyBody] = useState('')
   const [internal, setInternal] = useState(false)
   const [bookingInput, setBookingInput] = useState('')
@@ -51,6 +68,12 @@ export default function TicketsSection({
     () =>
       tickets.filter(
         (item) =>
+          (!requesterType || item.requesterType === requesterType) &&
+          (!queueFilter ||
+            (queueFilter === 'active' && isActive(item)) ||
+            (queueFilter === 'urgent' && item.priority === 'Urgent' && isActive(item)) ||
+            (queueFilter === 'unassigned' && item.assignee === 'Unassigned' && isActive(item)) ||
+            (queueFilter === 'overdue' && item.overdue && isActive(item))) &&
           (statusFilter === 'All' || item.status === statusFilter) &&
           (categoryFilter === 'All' || item.category === categoryFilter) &&
           (assigneeFilter === 'All' || item.assignee === assigneeFilter) &&
@@ -59,10 +82,13 @@ export default function TicketsSection({
             item.subject.toLowerCase().includes(query.trim().toLowerCase()) ||
             item.requester.toLowerCase().includes(query.trim().toLowerCase())),
       ),
-    [tickets, statusFilter, categoryFilter, assigneeFilter, query],
+    [tickets, requesterType, queueFilter, statusFilter, categoryFilter, assigneeFilter, query],
   )
 
-  const selected = tickets.find((item) => item.id === selectedId) ?? rows[0] ?? tickets[0]
+  const selected = openedTicketId
+    ? tickets.find((item) => item.id === openedTicketId && (!requesterType || item.requesterType === requesterType))
+    : undefined
+  const ticketTotal = requesterType ? tickets.filter((item) => item.requesterType === requesterType).length : tickets.length
 
   const submitReply = () => {
     if (!selected || !replyBody.trim()) return
@@ -73,9 +99,15 @@ export default function TicketsSection({
 
   return (
     <>
+      {!openedTicketId && (
       <section className="sa-panel">
         <div className="sa-panel-header">
-          <h3>Ticket queue</h3>
+          <div className="sa-panel-heading">
+            <h3>{queueTitle}</h3>
+            {queueFilter && onClearQueueFilter && (
+              <button type="button" className="sa-view-link" onClick={onClearQueueFilter}>Clear KPI filter</button>
+            )}
+          </div>
           <div className="sa-chip-row">
             {statusFilters.map((option) => (
               <button
@@ -124,7 +156,7 @@ export default function TicketsSection({
             ))}
           </select>
           <span className="sa-toolbar-meta">
-            {rows.length} of {tickets.length} tickets
+            {rows.length} of {ticketTotal} tickets
           </span>
         </div>
 
@@ -180,8 +212,8 @@ export default function TicketsSection({
                       <StatusPill status={ticket.status} />
                     </td>
                     <td>
-                      <button type="button" className="sa-btn-ghost" onClick={() => setSelectedId(ticket.id)}>
-                        {ticket.id === selected?.id ? 'Open' : 'View'}
+                      <button type="button" className="sa-btn-ghost" onClick={() => onOpenTicket(ticket.id)}>
+                        Open
                       </button>
                     </td>
                   </tr>
@@ -191,13 +223,17 @@ export default function TicketsSection({
           </div>
         )}
       </section>
+      )}
 
       {selected && (
         <section className="sa-panel">
           <div className="sa-panel-header">
-            <h3>
-              {selected.id} · {selected.subject}
-            </h3>
+            <div>
+              <button type="button" className="sa-view-link" onClick={onBackToQueue}>
+                ← Back to ticket queue
+              </button>
+              <h3 style={{ marginTop: 8 }}>{selected.id} · {selected.subject}</h3>
+            </div>
             <div className="sa-chip-row">
               <ChannelPill channel={selected.channel} />
               <PriorityPill priority={selected.priority} />
@@ -343,6 +379,18 @@ export default function TicketsSection({
             <button type="button" className="sa-btn approve" onClick={submitReply} disabled={!replyBody.trim()}>
               {internal ? 'Add internal note' : 'Send reply'}
             </button>
+          </div>
+        </section>
+      )}
+
+      {openedTicketId && !selected && (
+        <section className="sa-panel">
+          <div className="sa-panel-header">
+            <div>
+              <h3>Ticket not found</h3>
+              <span className="sa-panel-sub">This ticket may have been removed or the link may be incorrect.</span>
+            </div>
+            <button type="button" className="sa-btn-ghost" onClick={onBackToQueue}>Back to ticket queue</button>
           </div>
         </section>
       )}

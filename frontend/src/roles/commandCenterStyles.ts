@@ -29,29 +29,31 @@ export const commandCenterStyles = `
           gap: 20px;
           width: 100%;
           color: var(--sa-text);
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
         .sa-sidebar {
-          background: var(--sa-sidebar-bg);
+          background: radial-gradient(120% 120% at 0% 0%, #0f172a 0%, #0a1324 70%, #070c18 100%);
           border-radius: 24px;
-          padding: 18px 14px 14px;
+          padding: 18px 14px 12px;
           color: #fff;
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 22px;
           position: sticky;
           top: 16px;
           height: calc(100vh - 32px);
           min-height: 0;
           overflow-y: auto;
-          box-shadow: 0 18px 50px rgba(16, 24, 39, 0.12);
+          box-shadow: 0 28px 80px -30px rgba(2, 6, 23, 0.9);
+          backdrop-filter: blur(6px);
         }
 
         .sa-brand {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 8px 10px 18px;
+          padding: 8px 10px 20px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
@@ -69,8 +71,9 @@ export const commandCenterStyles = `
         }
 
         .sa-brand-text {
-          font-size: 0.86rem;
-          font-weight: 700;
+          font-size: 1.08rem;
+          font-weight: 800;
+          letter-spacing: -0.03em;
           color: #fff;
         }
 
@@ -78,14 +81,16 @@ export const commandCenterStyles = `
           font-size: 0.7rem;
           color: rgba(255, 255, 255, 0.55);
           margin-top: 2px;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
         }
 
         .sa-sidebar-label {
-          font-size: 0.66rem;
+          font-size: 0.68rem;
           font-weight: 800;
-          letter-spacing: 0.14em;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.42);
+          color: rgba(255, 255, 255, 0.5);
           padding: 0 10px 8px;
         }
 
@@ -106,9 +111,9 @@ export const commandCenterStyles = `
           border: 0;
           border-radius: 12px;
           background: transparent;
-          color: rgba(255, 255, 255, 0.72);
+          color: rgba(255, 255, 255, 0.8);
           font: inherit;
-          font-size: 0.86rem;
+          font-size: 0.92rem;
           font-weight: 600;
           padding: 10px 12px;
           cursor: pointer;
@@ -122,26 +127,26 @@ export const commandCenterStyles = `
         }
 
         .sa-nav-item.active {
-          background: linear-gradient(100deg, var(--sa-brand), var(--sa-brand-deep));
+          background: linear-gradient(90deg, rgba(255, 107, 44, 0.24), rgba(239, 74, 18, 0.08));
           color: #fff;
-          box-shadow: 0 10px 22px rgba(239, 74, 18, 0.28);
+          box-shadow: inset 3px 0 0 var(--sa-brand), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
         }
 
         .sa-nav-badge {
-          min-width: 20px;
-          height: 20px;
-          padding: 0 6px;
+          min-width: 32px;
+          height: auto;
+          padding: 3px 7px;
           border-radius: 999px;
           display: inline-grid;
           place-items: center;
-          background: rgba(255, 255, 255, 0.14);
-          color: #fff;
-          font-size: 0.66rem;
-          font-weight: 800;
+          background: rgba(255, 255, 255, 0.08);
+          color: #d9e4f2;
+          font-size: 0.64rem;
+          font-weight: 700;
         }
 
         .sa-nav-item.active .sa-nav-badge {
-          background: rgba(255, 255, 255, 0.24);
+          background: rgba(255, 255, 255, 0.14);
         }
 
         .sa-scope-card {
@@ -232,6 +237,7 @@ export const commandCenterStyles = `
           gap: 20px;
           min-width: 0;
           align-content: start;
+          color: var(--text-primary);
         }
 
         .sa-content {
@@ -244,17 +250,54 @@ export const commandCenterStyles = `
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 18px;
-          background: rgba(255, 255, 255, 0.86);
+          gap: 14px;
+          min-width: 0;
+          background: linear-gradient(135deg, #fff 0%, #fbfcfe 100%);
           border: 1px solid var(--sa-line);
-          border-radius: 22px;
-          padding: 18px 20px;
+          border-radius: 18px;
+          padding: 12px 16px;
           box-shadow: var(--sa-shadow);
+        }
+
+        .role-header-leading {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          min-width: 0;
+          flex: 1 1 auto;
+        }
+
+        .role-header-brand {
+          display: inline-flex;
+          flex: 0 0 auto;
+          align-items: center;
+          gap: 10px;
+          min-height: 42px;
+          padding-right: 20px;
+          border-right: 1px solid #e5e7eb;
+          color: #111827;
+          font-size: 0.9rem;
+          font-weight: 800;
+          letter-spacing: -0.025em;
+          white-space: nowrap;
+        }
+
+        .role-header-brand-mark {
+          width: 34px;
+          height: 34px;
+          border-radius: 11px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, var(--sa-brand), var(--sa-brand-deep));
+          color: #fff;
+          font-size: 1rem;
+          font-weight: 850;
+          box-shadow: 0 5px 12px rgba(239, 74, 18, 0.2), inset 0 1px 0 rgba(255,255,255,0.24);
         }
 
         .header-copy {
           display: grid;
-          gap: 4px;
+          gap: 3px;
           min-width: 0;
         }
 
@@ -269,16 +312,19 @@ export const commandCenterStyles = `
 
         .header-title {
           margin: 0;
-          font-size: clamp(1.5rem, 2vw, 2rem);
-          letter-spacing: -0.05em;
-          line-height: 1.1;
-          font-weight: 800;
+          font-size: clamp(1.45rem, 1.8vw, 1.8rem);
+          letter-spacing: -0.04em;
+          line-height: 1.08;
+          font-weight: 760;
+          color: #111827;
         }
 
         .header-breadcrumb {
-          color: var(--sa-muted);
-          font-size: 0.8rem;
-          font-weight: 600;
+          margin: 0;
+          color: #64748b;
+          font-size: 0.76rem;
+          font-weight: 500;
+          letter-spacing: 0.015em;
         }
 
         .header-actions {
@@ -441,6 +487,38 @@ export const commandCenterStyles = `
           font-size: 0.72rem;
           font-weight: 700;
           color: #94a3b8;
+        }
+
+        .legacy-header-control,
+        .legacy-profile-control {
+          display: none !important;
+        }
+
+        .role-alert-meta {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .role-profile-popover {
+          width: 110px;
+        }
+
+        .role-profile-logout {
+          width: 100%;
+          padding: 9px 12px;
+          border: 0;
+          background: transparent;
+          color: #b42318;
+          font: inherit;
+          font-size: 0.76rem;
+          font-weight: 700;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .role-profile-logout:hover {
+          background: #fef2f2;
         }
 
         .header-popover-action {
@@ -2146,5 +2224,140 @@ export const commandCenterStyles = `
           text-align: center;
           font-size: 0.84rem;
           color: var(--sa-muted);
+        }
+
+        .stateadmin-role-dashboard,
+        .superadmin-role-dashboard {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          align-items: start;
+        }
+
+        .stateadmin-role-dashboard .sa-main,
+        .stateadmin-role-dashboard .sa-content,
+        .superadmin-role-dashboard .superadmin-main,
+        .superadmin-role-dashboard .dashboard-content {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+        }
+
+        .stateadmin-role-dashboard > *,
+        .superadmin-role-dashboard > *,
+        .stateadmin-role-dashboard .sa-main > *,
+        .superadmin-role-dashboard .superadmin-main > * {
+          max-width: 100%;
+          min-width: 0;
+        }
+
+        @media (max-width: 1280px) {
+          .stateadmin-role-dashboard,
+          .superadmin-role-dashboard {
+            grid-template-columns: 220px minmax(0, 1fr);
+            gap: 16px;
+          }
+
+          .sa-kpi-grid,
+          .sa-attention {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .sa-analytics-grid,
+          .sa-lower-grid,
+          .analytics-grid {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .dashboard-header,
+          .sa-panel-header {
+            flex-wrap: wrap;
+          }
+
+          .header-actions {
+            min-width: 0;
+          }
+
+          .header-toolbar {
+            max-width: 100%;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .stateadmin-role-dashboard,
+          .superadmin-role-dashboard {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .stateadmin-role-dashboard .sa-sidebar,
+          .superadmin-role-dashboard .superadmin-sidebar {
+            position: static;
+            height: auto;
+            max-height: none;
+          }
+
+          .stateadmin-role-dashboard .sa-nav,
+          .superadmin-role-dashboard .sidebar-stack {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          }
+
+          .sa-content,
+          .superadmin-main,
+          .dashboard-content {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .sa-kpi-grid,
+          .sa-attention,
+          .stats-grid {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .dashboard-header,
+          .sa-panel-header {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .role-header-leading {
+            width: 100%;
+            gap: 14px;
+          }
+
+          .role-header-brand {
+            min-height: 34px;
+            padding-right: 12px;
+          }
+
+          .role-header-brand-mark {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+          }
+
+          .header-actions,
+          .header-toolbar {
+            align-items: stretch;
+            justify-content: flex-start;
+            width: 100%;
+          }
+
+          .header-search-wrap,
+          .header-search,
+          .sa-toolbar .sa-input {
+            width: 100%;
+            min-width: 0;
+          }
+
+          .notif-card {
+            grid-template-columns: auto minmax(0, 1fr);
+          }
+
+          .notif-actions {
+            grid-column: 2;
+            align-items: flex-start;
+          }
         }
       `

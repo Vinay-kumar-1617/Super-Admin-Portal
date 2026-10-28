@@ -899,33 +899,31 @@ export default function ServiceAreasPage({
       <style>{statesPageStyles}</style>
       <style>{serviceAreaPageStyles}</style>
 
-      <header className="states-header">
-        <div className="states-header-copy">
-          <div className="states-breadcrumb">
-            <button type="button" onClick={onBack}>Dashboard</button>
-            <span>/</span>
-            <span>Geography</span>
-            <span>/</span>
-            <strong>Service Areas</strong>
+      {!viewArea && (
+        <header className="states-header">
+          <div className="states-header-copy">
+            <div className="states-breadcrumb">
+              <button type="button" onClick={onBack}>Dashboard</button>
+              <span>/</span>
+              <span>Geography</span>
+              <span>/</span>
+              <strong>Service Areas</strong>
+            </div>
+            <h2>Service Areas</h2>
           </div>
-          <h2>Service Areas</h2>
-          <p>
-            Define coverage zones with radius or PIN code boundaries, assign providers, publish pricing and control
-            availability for every service area across the platform.
-          </p>
-        </div>
 
-        <div className="states-header-actions">
-          {onBack && (
-            <button type="button" className="btn-secondary" onClick={onBack}>
-              ← Back to Overview
+          <div className="states-header-actions">
+            {onBack && (
+              <button type="button" className="btn-secondary" onClick={onBack}>
+                ← Back to Overview
+              </button>
+            )}
+            <button type="button" className="btn-primary geo-add-action" onClick={openAddForm}>
+              <span>+</span> Add Service Area
             </button>
-          )}
-          <button type="button" className="btn-primary" onClick={openAddForm}>
-            <span>+</span> Add Service Area
-          </button>
-        </div>
-      </header>
+          </div>
+        </header>
+      )}
 
       {!viewArea && (
         <>
@@ -1107,30 +1105,32 @@ export default function ServiceAreasPage({
                         <td style={{ color: '#64748b', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{area.createdDate}</td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <div className="table-actions-cell">
-                            <button type="button" className="action-btn view" onClick={() => openDetails(area)} aria-label={`View ${area.name}`}>
-                              View
+                            <button type="button" className="action-btn view icon-action" onClick={() => openDetails(area)} aria-label={`View ${area.name}`} title="View service area">
+                              👁️
                             </button>
-                            <button type="button" className="action-btn edit" onClick={() => openEditForm(area)} aria-label={`Edit ${area.name}`}>
-                              Edit
+                            <button type="button" className="action-btn edit icon-action" onClick={() => openEditForm(area)} aria-label={`Edit ${area.name}`} title="Edit service area">
+                              ✏️
                             </button>
                             <button
                               type="button"
-                              className="action-btn"
+                              className="action-btn icon-action"
                               onClick={() => openManageProviders(area)}
                               aria-label={`Manage providers for ${area.name}`}
+                              title="Manage providers"
                             >
-                              Providers
+                              👥
                             </button>
                             <button
                               type="button"
-                              className={`action-btn ${area.status === 'Active' ? 'toggle-deactivate' : 'toggle-activate'}`}
+                              className={`action-btn icon-action ${area.status === 'Active' ? 'toggle-deactivate' : 'toggle-activate'}`}
                               onClick={() => requestStatusChange(area)}
                               aria-label={`${area.status === 'Active' ? 'Deactivate' : 'Activate'} ${area.name}`}
+                              title={area.status === 'Active' ? 'Deactivate service area' : 'Activate service area'}
                             >
-                              {area.status === 'Active' ? 'Deactivate' : 'Activate'}
+                              {area.status === 'Active' ? '🚫' : '✅'}
                             </button>
-                            <button type="button" className="action-btn danger" onClick={() => requestDelete(area)} aria-label={`Delete ${area.name}`}>
-                              Delete
+                            <button type="button" className="action-btn danger icon-action" onClick={() => requestDelete(area)} aria-label={`Delete ${area.name}`} title="Delete service area">
+                              🗑️
                             </button>
                           </div>
                         </td>
@@ -1164,7 +1164,7 @@ export default function ServiceAreasPage({
       )}
 
       {viewArea && (
-        <section style={{ display: 'grid', gap: 16, marginTop: 16 }} aria-labelledby="view-area-title">
+        <section style={{ display: 'grid', gap: 16 }} aria-labelledby="view-area-title">
           <div className="states-header">
             <div className="states-header-copy">
               <div className="states-breadcrumb">
@@ -1691,7 +1691,7 @@ export default function ServiceAreasPage({
                 <button type="button" className="btn-secondary" onClick={closeForm}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary">
+                <button type="submit" className={isEditMode ? 'btn-primary' : 'btn-primary geo-add-action'}>
                   {isEditMode ? 'Save Changes' : 'Add Service Area'}
                 </button>
               </footer>
@@ -1852,7 +1852,7 @@ export default function ServiceAreasPage({
                   />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button type="submit" className="btn-primary">Add & Assign</button>
+                  <button type="submit" className="btn-primary geo-add-action">Add & Assign</button>
                 </div>
               </form>
             </div>
@@ -1919,5 +1919,4 @@ function coverageTypeHint(type: CoverageType) {
   if (type === 'ZIP / PIN Codes') return 'Coverage limited to PIN codes'
   return 'Custom drawn boundary'
 }
-
 

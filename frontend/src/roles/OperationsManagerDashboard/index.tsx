@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { commandCenterStyles } from '../commandCenterStyles'
+import RoleHeaderMenus from '../RoleHeaderMenus'
 import {
   auditTrail,
   availableOperators,
@@ -763,11 +764,14 @@ export default function OperationsManagerDashboard({ onSignOut }: OperationsMana
 
       <div className="sa-main">
         <header className="dashboard-header">
-          <div className="header-copy">
-            <p className="header-kicker">{opsProfile.state} · {opsProfile.city} · {opsProfile.zone} command</p>
-            <h1 className="header-title">{sectionMeta.title}</h1>
-            <div className="header-breadcrumb">
-              Overview / {opsProfile.state} / {opsProfile.city} / {opsProfile.zone} / {sectionMeta.crumb}
+          <div className="role-header-leading">
+            <div className="role-header-brand" aria-label="EquipHub">
+              <span className="role-header-brand-mark" aria-hidden="true">E</span>
+              <span>EquipHub</span>
+            </div>
+            <div className="header-copy">
+              <h1 className="header-title">{sectionMeta.title}</h1>
+              <div className="header-breadcrumb">{opsProfile.state} · {opsProfile.city} · {opsProfile.zone}</div>
             </div>
           </div>
 
@@ -818,7 +822,7 @@ export default function OperationsManagerDashboard({ onSignOut }: OperationsMana
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'notifications' ? 'is-open' : ''}`}
@@ -863,7 +867,7 @@ export default function OperationsManagerDashboard({ onSignOut }: OperationsMana
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'alerts' ? 'is-open' : ''}`}
@@ -908,7 +912,7 @@ export default function OperationsManagerDashboard({ onSignOut }: OperationsMana
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'period' ? 'is-open' : ''}`}
@@ -940,10 +944,21 @@ export default function OperationsManagerDashboard({ onSignOut }: OperationsMana
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+              <div className="legacy-profile-control" style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
                 <div className="header-avatar">{opsProfile.adminInitials}</div>
                 <button type="button" className="org-button" onClick={onSignOut}>Logout</button>
               </div>
+              <RoleHeaderMenus
+                notifications={notifications}
+                alerts={opsAlerts}
+                initials={opsProfile.adminInitials}
+                onNotificationClick={(item) => { markNotificationRead(item.id); openFeedTarget(item.target) }}
+                onAlertClick={(item) => openFeedTarget(item.target)}
+                onMarkAllRead={markAllNotificationsRead}
+                onSignOut={onSignOut}
+                onAlertsFooter={() => openFeedTarget('overview')}
+                alertsFooterLabel="Open overview"
+              />
             </div>
           </div>
         </header>

@@ -12,7 +12,7 @@ export const statesPageStyles = `        .states-page {
         /* Top Header Card */
         .states-header {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
           gap: 20px;
           padding: 22px 24px;
@@ -26,6 +26,7 @@ export const statesPageStyles = `        .states-page {
         .states-header-copy {
           display: grid;
           gap: 6px;
+          min-width: 0;
         }
 
         .states-header-copy h2 {
@@ -34,6 +35,7 @@ export const statesPageStyles = `        .states-page {
           font-weight: 800;
           letter-spacing: -0.04em;
           color: #182230;
+          line-height: 1.25;
         }
 
         .states-header-copy p {
@@ -58,10 +60,23 @@ export const statesPageStyles = `        .states-page {
         .states-breadcrumb button {
           border: 0;
           background: transparent;
-          color: #ef4a12;
+          color: var(--brand-orange);
           padding: 0;
           font: inherit;
           cursor: pointer;
+          font-weight: 700;
+        }
+
+        .states-breadcrumb button:hover {
+          text-decoration: underline;
+        }
+
+        .states-header-meta {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 2px;
         }
 
         .states-header-actions {
@@ -69,6 +84,17 @@ export const statesPageStyles = `        .states-page {
           align-items: center;
           gap: 10px;
           flex-wrap: wrap;
+          flex-shrink: 0;
+        }
+
+        .states-header-actions .btn-primary,
+        .states-header-actions .btn-secondary {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          height: 40px;
+          box-sizing: border-box;
+          white-space: nowrap;
         }
 
         .btn-primary {
@@ -91,6 +117,9 @@ export const statesPageStyles = `        .states-page {
           transform: translateY(-1px);
           box-shadow: 0 10px 22px rgba(239, 74, 18, 0.35);
         }
+
+        .geo-add-action { background: linear-gradient(100deg, #b84318, #8f2f0d); box-shadow: 0 6px 14px rgba(143,47,13,0.2); }
+        .geo-add-action:hover { background: linear-gradient(100deg, #a83b14, #7c280a); box-shadow: 0 8px 18px rgba(143,47,13,0.25); }
 
         .btn-secondary {
           display: inline-flex;
@@ -501,6 +530,20 @@ export const statesPageStyles = `        .states-page {
           transition: all 0.15s ease;
         }
 
+        .action-btn.icon-action {
+          display: inline-grid;
+          width: 34px;
+          height: 32px;
+          padding: 0;
+          place-items: center;
+          font-size: 0.95rem;
+        }
+
+        .action-btn.icon-action:focus-visible {
+          outline: 3px solid rgba(37,99,235,0.4);
+          outline-offset: 2px;
+        }
+
         .action-btn:hover {
           background: #f8fafc;
           border-color: rgba(15,23,42,0.2);
@@ -791,6 +834,34 @@ export const statesPageStyles = `        .states-page {
         .state-kpi-tile.blue { --tile-accent: #2563eb; background: linear-gradient(180deg,#fff,#f8faff); }
         .state-kpi-tile.green { --tile-accent: #08a66c; background: linear-gradient(180deg,#fff,#f6fdf9); }
         .state-kpi-tile.red { --tile-accent: #ef4444; background: linear-gradient(180deg,#fff,#fff8f8); }
+
+        button.state-kpi-tile {
+          width: 100%;
+          text-align: left;
+          font: inherit;
+          color: inherit;
+        }
+
+        .state-kpi-tile.interactive {
+          cursor: pointer;
+          transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+        }
+
+        .state-kpi-tile.interactive:hover {
+          transform: translateY(-2px);
+          border-color: rgba(15,23,42,0.16);
+          box-shadow: 0 18px 30px -20px rgba(15,23,42,0.5);
+        }
+
+        .state-kpi-tile.interactive:focus-visible {
+          outline: 3px solid rgba(255,107,44,0.4);
+          outline-offset: 2px;
+        }
+
+        .state-kpi-tile.selected {
+          border-color: var(--tile-accent);
+          box-shadow: 0 0 0 2px rgba(255,107,44,0.18), 0 18px 30px -20px rgba(15,23,42,0.5);
+        }
 
         .state-kpi-tile-value {
           font-size: 1.4rem;

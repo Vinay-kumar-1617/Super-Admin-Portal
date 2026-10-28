@@ -468,7 +468,7 @@ export default function SupportTicketsPage({ onBack }: SupportTicketsPageProps) 
         )
       })
       .sort((a, b) => {
-        let result = 0
+        let result: number
         if (sortKey === 'priority') result = priorityOrder[a.priority] - priorityOrder[b.priority]
         else if (sortKey === 'createdDate') result = a.createdDate.localeCompare(b.createdDate)
         else if (sortKey === 'id') result = a.id.localeCompare(b.id)
@@ -582,9 +582,9 @@ export default function SupportTicketsPage({ onBack }: SupportTicketsPageProps) 
 
         .kpi-detail-back {
           display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 0;
-          font: inherit; font-size: 0.78rem; font-weight: 700; color: #2563eb; cursor: pointer;
+          font: inherit; font-size: 0.78rem; font-weight: 700; color: var(--brand-orange); cursor: pointer;
         }
-        .kpi-detail-back:hover { color: #1d4ed8; text-decoration: underline; }
+        .kpi-detail-back:hover { color: #c94310; text-decoration: underline; }
 
         .ticket-summary-grid {
           display: grid;
@@ -622,15 +622,41 @@ export default function SupportTicketsPage({ onBack }: SupportTicketsPageProps) 
         .ticket-card.accent-red strong { color: #dc2626; }
         .ticket-card.accent-red .ticket-card-icon { background: rgba(239, 68, 68, 0.13); color: #dc2626; }
 
-        .ticket-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+        .ticket-requests-panel > .ticket-requests-header {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          align-items: stretch;
+          gap: 14px;
+        }
+        .ticket-toolbar {
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          min-width: 0;
+        }
         .ticket-search {
-          flex: 1 1 220px; padding: 9px 12px; border-radius: 10px;
+          box-sizing: border-box;
+          flex: 1 1 auto;
+          min-width: 0;
+          min-height: 40px;
+          padding: 9px 12px; border-radius: 10px;
           border: 1px solid rgba(15, 23, 42, 0.14); background: #fff;
           font: inherit; font-size: 0.83rem; color: var(--text);
         }
         .ticket-select {
+          box-sizing: border-box;
+          flex: 0 0 160px;
+          width: 160px;
+          min-width: 0;
+          min-height: 40px;
           padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(15, 23, 42, 0.14);
           background: #fff; font: inherit; font-size: 0.8rem; font-weight: 700; color: var(--text);
+        }
+        @media (max-width: 900px) {
+          .ticket-select { flex-basis: 130px; width: 130px; }
+          .ticket-search { font-size: 0.74rem; }
         }
 
         .ticket-th { cursor: pointer; user-select: none; white-space: nowrap; }
@@ -753,9 +779,9 @@ export default function SupportTicketsPage({ onBack }: SupportTicketsPageProps) 
           <button type="button" className="kpi-detail-back" onClick={onBack}>
             <span aria-hidden="true">←</span> Dashboard overview
           </button>
-          <p className="header-kicker">Support / Ticket Management</p>
+          
           <h1 className="header-title">Support Ticket Management</h1>
-          <div className="header-breadcrumb">Support / Ticket Management / Dashboard</div>
+          
         </div>
         <span className="chip active">Support desk · 9 AM – 9 PM</span>
       </header>
@@ -768,8 +794,8 @@ export default function SupportTicketsPage({ onBack }: SupportTicketsPageProps) 
         {card('⚡', 'High priority', String(tickets.filter((t) => t.priority === 'High' || t.priority === 'Urgent').length), 'High + urgent tickets', 'accent-red', 'high-priority')}
       </section>
 
-      <section className="panel" aria-labelledby="ticket-requests-title">
-        <div className="panel-header">
+      <section className="panel ticket-requests-panel" aria-labelledby="ticket-requests-title">
+        <div className="panel-header ticket-requests-header">
           <div>
             <h3 id="ticket-requests-title">Tickets</h3>
             <span className="health-meta">Showing {filteredTickets.length} of {tickets.length} tickets</span>

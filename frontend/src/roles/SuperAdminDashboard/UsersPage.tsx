@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
   AUDIT_TABS,
   type DetailTab,
@@ -18,7 +18,6 @@ import {
   sessionsFor,
   stateOptions,
   userStatusPillClass,
-  usersToCsv,
   zoneOptionsForCity,
   type ManagedRoleKey,
   type ManagedUser,
@@ -29,6 +28,8 @@ const PAGE_SIZE = 7
 
 type UsersPageProps = {
   onBack?: () => void
+  embedded?: boolean
+  addUserRequest?: number
 }
 
 type AddUserForm = {
@@ -114,7 +115,7 @@ function PermissionsEditor({
   )
 }
 
-export default function UsersPage({ onBack }: UsersPageProps) {
+export default function UsersPage({ onBack, embedded = false, addUserRequest = 0 }: UsersPageProps) {
   const [users, setUsers] = useState<ManagedUser[]>(() => DEMO_MANAGED_USERS)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'All' | ManagedUserStatus>('All')
@@ -223,6 +224,10 @@ export default function UsersPage({ onBack }: UsersPageProps) {
     setAddForm(emptyAddForm())
     setShowAdd(true)
   }
+
+  useEffect(() => {
+    if (embedded && addUserRequest > 0) openAdd()
+  }, [addUserRequest, embedded])
 
   const openEdit = (user: ManagedUser) => {
     setEditUser(user)
@@ -366,19 +371,6 @@ export default function UsersPage({ onBack }: UsersPageProps) {
     })
   }
 
-  const exportCsv = () => {
-    const csv = usersToCsv(filteredUsers)
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `platform_users_${new Date().toISOString().slice(0, 10)}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    showToast(`Exported ${filteredUsers.length} users to CSV.`)
-  }
-
   const activeRoleScope = (user: ManagedUser) => {
     if (user.scopeType === 'national') return 'All India (national)'
     if (user.scopeType === 'zone') return `${user.zone ?? '—'} · ${user.city ?? user.state}`
@@ -452,10 +444,12 @@ export default function UsersPage({ onBack }: UsersPageProps) {
         .um-scope-note { display: flex; align-items: center; gap: 10px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.16); border-radius: 14px; padding: 11px 14px; font-size: 0.78rem; color: #1d4ed8; font-weight: 600; }
         .um-scope-note strong { font-weight: 800; }
         .um-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; background: #fff; border: 1px solid rgba(15,23,42,0.08); border-left: 4px solid #ff6b2c; border-radius: 18px; padding: 16px 18px; box-shadow: 0 12px 28px rgba(15,23,42,0.05); }
+        .um-head.embedded { align-items: center; justify-content: space-between; }
         .um-head h3 { margin: 0; font-size: 1.2rem; letter-spacing: -0.03em; color: #182230; }
         .um-head p { margin: 4px 0 0; font-size: 0.82rem; color: #64748b; }
         .um-head-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        .um-primary { border: 0; border-radius: 10px; padding: 10px 16px; font: inherit; font-size: 0.82rem; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(100deg, #ff6b2c, #ef4a12); box-shadow: 0 10px 22px rgba(239,74,18,0.28); }
+        .um-primary { border: 0; border-radius: 10px; padding: 10px 16px; font: inherit; font-size: 0.82rem; font-weight: 800; cursor: pointer; color: #fff; background: linear-gradient(100deg, #b84318, #8f2f0d); box-shadow: 0 6px 14px rgba(143,47,13,0.2); }
+        .um-primary:hover:not(:disabled) { background: linear-gradient(100deg, #a83b14, #7c280a); }
         .um-primary[disabled] { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
         .um-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
         .um-stat { text-align: left; display: grid; gap: 4px; background: #fff; border: 1px solid rgba(15,23,42,0.08); border-left: 4px solid rgba(15,23,42,0.12); border-radius: 14px; padding: 14px 16px; cursor: pointer; font: inherit; }
@@ -492,12 +486,13 @@ export default function UsersPage({ onBack }: UsersPageProps) {
         .um-empty { display: grid; gap: 10px; place-items: center; padding: 44px 20px; color: #64748b; font-size: 0.84rem; }
         .um-table-actions { display: flex; gap: 6px; flex-wrap: wrap; }
         .um-act { border: 1px solid rgba(15,23,42,0.12); background: #fff; color: #182230; border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 0.72rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .um-act.icon-action { display: inline-grid; width: 32px; height: 30px; padding: 0; place-items: center; font-size: 0.95rem; }
         .um-act:hover { border-color: rgba(255,107,44,0.45); color: #ef4a12; }
         .um-act.danger:hover { border-color: rgba(239,68,68,0.5); color: #b91c1c; }
         .um-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-top: 1px solid rgba(15,23,42,0.06); }
         .um-pager span { font-size: 0.74rem; font-weight: 700; color: #64748b; }
         .um-pager-btns { display: flex; gap: 8px; }
-        .um-avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 0.82rem; color: #fff; background: linear-gradient(135deg, #ff6b2c, #ef4a12); flex-shrink: 0; }
+        .um-avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 0.82rem; color: #fff; background: linear-gradient(135deg, #b84318, #8f2f0d); flex-shrink: 0; }
         .um-avatar.lg { width: 56px; height: 56px; font-size: 1.05rem; }
         .um-name-cell { display: flex; align-items: center; gap: 10px; }
         .um-role-badge { display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 800; background: rgba(124,58,237,0.12); color: #6d28d9; white-space: nowrap; }
@@ -552,35 +547,28 @@ export default function UsersPage({ onBack }: UsersPageProps) {
         .um-required { color: #b91c1c; }
         .um-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: #182230; color: #fff; padding: 11px 18px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; box-shadow: 0 20px 40px rgba(15,23,42,0.35); z-index: 1100; }
         .um-note { margin: 0; font-size: 0.76rem; color: #64748b; }
-        @media (max-width: 900px) { .um-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .um-head { flex-direction: column; } }
+        @media (max-width: 900px) {
+          .um-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .um-head { flex-direction: column; align-items: stretch; }
+          .um-head.embedded .um-head-actions { justify-content: flex-end; }
+        }
       `}</style>
 
-      <div className="um-scope-note">
-        <span>🛡️</span>
-        <span>
-          Full platform access · manage every account across <strong>all states, cities and zones</strong>, including Super Admin accounts.
-        </span>
-      </div>
+      
 
-      <div className="um-head">
-        <div>
-          <h3>Users &amp; Access</h3>
-          <p>Create staff accounts, assign Super Admin / State / City / Zone and functional roles, manage permissions, sessions and access.</p>
-        </div>
+      {!embedded && <div className="um-head">
+        <h3>Users &amp; Access</h3>
         <div className="um-head-actions">
           {onBack && (
             <button type="button" className="um-ghost" onClick={onBack}>
               ← Back
             </button>
           )}
-          <button type="button" className="um-ghost" onClick={exportCsv}>
-            Export CSV
-          </button>
           <button type="button" className="um-primary" onClick={openAdd} disabled={!canManage}>
             + Add User
           </button>
         </div>
-      </div>
+      </div>}
 
       <div className="um-stats">
         {cards.map((card) => (
@@ -763,23 +751,23 @@ export default function UsersPage({ onBack }: UsersPageProps) {
                       <td>{formatRelative(user.lastLogin)}</td>
                       <td>
                         <div className="um-table-actions">
-                          <button type="button" className="um-act" onClick={() => openDetails(user)}>
-                            View
+                          <button type="button" className="um-act icon-action" onClick={() => openDetails(user)} aria-label={`View ${user.fullName}`} title="View">
+                            👁️
                           </button>
-                          <button type="button" className="um-act" onClick={() => openEdit(user)}>
-                            Edit
+                          <button type="button" className="um-act icon-action" onClick={() => openEdit(user)} aria-label={`Edit ${user.fullName}`} title="Edit">
+                            ✏️
                           </button>
                           {user.status === 'Active' ? (
-                            <button type="button" className="um-act danger" onClick={() => deactivateUser(user)}>
-                              Deactivate
+                            <button type="button" className="um-act icon-action danger" onClick={() => deactivateUser(user)} aria-label={`Deactivate ${user.fullName}`} title="Deactivate">
+                              🚫
                             </button>
                           ) : user.status === 'Pending' ? (
-                            <button type="button" className="um-act" onClick={() => resendInvite(user)}>
-                              Resend invite
+                            <button type="button" className="um-act icon-action" onClick={() => resendInvite(user)} aria-label={`Resend invite to ${user.fullName}`} title="Resend invite">
+                              ✉️
                             </button>
                           ) : (
-                            <button type="button" className="um-act" onClick={() => activateUser(user)}>
-                              Activate
+                            <button type="button" className="um-act icon-action" onClick={() => activateUser(user)} aria-label={`Activate ${user.fullName}`} title="Activate">
+                              ✅
                             </button>
                           )}
                         </div>

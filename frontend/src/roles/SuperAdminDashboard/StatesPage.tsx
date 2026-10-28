@@ -1,6 +1,11 @@
-import { useState, useMemo, useEffect, type FormEvent } from 'react'
+import { useState, useMemo, type FormEvent } from 'react'
 import { statesPageStyles } from './pageStyles'
+import StateMetricPage, { type StateMetricView } from './StateMetricPage'
 import type { BookingStatus, StateActivity, StateBooking, StateItem } from './statesData'
+import type { CityItem } from './citiesData'
+import type { ZoneItem } from './zonesData'
+
+type StateMetric = 'districts' | 'active-zones' | 'users' | 'officers'
 
 type EditStateForm = {
   id: string
@@ -49,6 +54,8 @@ const buildEditStateForm = (item: StateItem): EditStateForm => ({
 
 type StatesPageProps = {
   states: StateItem[]
+  cities: CityItem[]
+  zones: ZoneItem[]
   setStates: React.Dispatch<React.SetStateAction<StateItem[]>>
   onBack?: () => void
   statusFilter: 'all' | 'active' | 'inactive'
@@ -61,6 +68,8 @@ type StatesPageProps = {
 
 export default function StatesPage({
   states,
+  cities,
+  zones,
   setStates,
   onBack,
   statusFilter,
@@ -72,20 +81,18 @@ export default function StatesPage({
 }: StatesPageProps) {
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery ?? '')
   const [stateFilter, setStateFilter] = useState('all')
+  const [cityFilter, setCityFilter] = useState('all')
+  const [zoneFilter, setZoneFilter] = useState('all')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [selectedMetric, setSelectedMetric] = useState<StateMetric | null>(null)
 
   // Selected State for viewing details
-  const [viewState, setViewState] = useState<StateItem | null>(null)
+  const [viewState, setViewState] = useState<StateItem | null>(() => {
+    if (!initialSelectedState) return null
+    return states.find((s) => s.name.toLowerCase() === initialSelectedState.toLowerCase()) ?? null
+  })
+  const [metricView, setMetricView] = useState<StateMetricView | null>(null)
   const [editState, setEditState] = useState<StateItem | null>(null)
-
-  useEffect(() => {
-    if (initialSelectedState) {
-      const found = states.find((s) => s.name.toLowerCase() === initialSelectedState.toLowerCase())
-      if (found) {
-        setViewState(found)
-      }
-    }
-  }, [initialSelectedState, states])
 
   // Booking filters inside the selected State details modal
   const [bookingSearch, setBookingSearch] = useState('')
@@ -124,12 +131,30 @@ export default function StatesPage({
 
   // Alphabetical state options for the state selection dropdown
   const stateOptions = useMemo(() => [...states].sort((a, b) => a.name.localeCompare(b.name)), [states])
+  const cityOptions = useMemo(
+    () => cities
+      .filter((city) => stateFilter === 'all' || city.stateId === stateFilter)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [cities, stateFilter],
+  )
+  const zoneOptions = useMemo(
+    () => zones
+      .filter((zone) => {
+        if (stateFilter !== 'all' && zone.stateName !== states.find((state) => state.id === stateFilter)?.name) return false
+        if (cityFilter !== 'all' && zone.cityId !== cityFilter) return false
+        return true
+      })
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [zones, states, stateFilter, cityFilter],
+  )
 
   // Filtered states list for the main page
   const filteredStates = useMemo(() => {
     return states.filter((st) => {
       // State selection filter
       if (stateFilter !== 'all' && st.id !== stateFilter) return false
+      if (cityFilter !== 'all' && !cities.some((city) => city.id === cityFilter && city.stateId === st.id)) return false
+      if (zoneFilter !== 'all' && !zones.some((zone) => zone.id === zoneFilter && zone.stateName === st.name)) return false
 
       // Status filter
       if (statusFilter === 'active' && st.status !== 'Active') return false
@@ -145,14 +170,34 @@ export default function StatesPage({
 
       return matchName || matchCode || matchAdmin || matchCapital
     })
-  }, [states, stateFilter, statusFilter, searchQuery])
+  }, [states, cities, zones, stateFilter, cityFilter, zoneFilter, statusFilter, searchQuery])
 
   // Aggregate stats for the main page
   const activeCount = useMemo(() => states.filter((s) => s.status === 'Active').length, [states])
   const inactiveCount = useMemo(() => states.filter((s) => s.status === 'Inactive').length, [states])
   const totalDistrictsCount = useMemo(() => states.reduce((sum, s) => sum + s.totalDistricts, 0), [states])
-  const totalZonesCount = useMemo(() => states.reduce((sum, s) => sum + (s.totalZones ?? 0), 0), [states])
+  const totalZonesCount = useMemo(() => zones.filter((zone) => zone.status === 'Active').length, [zones])
   const totalUsersCount = useMemo(() => states.reduce((sum, s) => sum + s.totalUsers, 0), [states])
+  const totalOfficersCount = useMemo(
+    () => states.reduce((sum, state) => sum + (state.userBreakdown?.fieldOfficers ?? 0), 0),
+    [states],
+  )
+  const selectedMetricRows = useMemo(() => {
+    if (!selectedMetric) return []
+
+    return states
+      .map((state) => ({
+        state,
+        value: selectedMetric === 'districts'
+          ? state.totalDistricts
+          : selectedMetric === 'active-zones'
+            ? zones.filter((zone) => zone.status === 'Active' && zone.stateName === state.name).length
+            : selectedMetric === 'users'
+              ? state.totalUsers
+              : state.userBreakdown?.fieldOfficers ?? 0,
+      }))
+      .sort((a, b) => b.value - a.value || a.state.name.localeCompare(b.state.name))
+  }, [selectedMetric, states, zones])
 
   // Zone options for the selected state
   const stateZoneOptions = useMemo(() => {
@@ -214,10 +259,17 @@ export default function StatesPage({
   // Open state details and reset sub-filters
   const handleOpenStateDetails = (st: StateItem) => {
     setViewState(st)
+    setMetricView(null)
     setBookingSearch('')
     setBookingDistrictFilter('all')
     setBookingStatusFilter('all')
     setBookingDateFilter('')
+    setSelectedBooking(null)
+  }
+
+  const exitStateDetails = () => {
+    setMetricView(null)
+    setViewState(null)
     setSelectedBooking(null)
   }
 
@@ -439,7 +491,7 @@ export default function StatesPage({
         .states-clear-btn {
           border: 0;
           background: transparent;
-          color: #ef4a12;
+          color: var(--brand-orange);
           font-family: inherit;
           font-size: 0.78rem;
           font-weight: 800;
@@ -450,35 +502,170 @@ export default function StatesPage({
         .states-clear-btn:hover {
           text-decoration: underline;
         }
+
+        .states-page {
+          width: 100%;
+          max-width: 100%;
+        }
+
+        .state-metric-breakdown {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .state-metric-breakdown th,
+        .state-metric-breakdown td {
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+          text-align: left;
+        }
+
+        .state-metric-breakdown th {
+          color: #64748b;
+          font-size: 0.7rem;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+
+        .state-metric-breakdown td:last-child,
+        .state-metric-breakdown th:last-child {
+          text-align: right;
+        }
+
+        @media (min-width: 1100px) {
+          .states-page .states-table {
+            min-width: 0;
+            table-layout: fixed;
+          }
+
+          .states-page .states-table th,
+          .states-page .states-table td {
+            padding-right: clamp(8px, 0.8vw, 14px);
+            padding-left: clamp(8px, 0.8vw, 14px);
+          }
+
+          .states-page .states-table th:nth-child(1) { width: 18%; }
+          .states-page .states-table th:nth-child(2) { width: 9%; }
+          .states-page .states-table th:nth-child(3) { width: 20%; }
+          .states-page .states-table th:nth-child(4) { width: 10%; }
+          .states-page .states-table th:nth-child(5) { width: 10%; }
+          .states-page .states-table th:nth-child(6) { width: 9%; }
+          .states-page .states-table th:nth-child(7) { width: 12%; }
+          .states-page .states-table th:nth-child(8) { width: 12%; }
+
+          .states-page .state-name-cell {
+            min-width: 0;
+            gap: 8px;
+          }
+
+          .states-page .state-name-info,
+          .states-page .admin-pill {
+            min-width: 0;
+            overflow-wrap: anywhere;
+          }
+
+          .states-page .table-actions-cell {
+            gap: 4px;
+          }
+
+          .states-page .action-btn.icon-action {
+            flex: 0 0 30px;
+            width: 30px;
+            height: 30px;
+          }
+        }
+
+        .states-header {
+          align-items: center;
+        }
+
+        .states-dashboard-back {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          margin: 0 0 6px;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          color: var(--brand-orange);
+          font: inherit;
+          font-size: 0.78rem;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        .states-dashboard-back:hover { color: #c94310; text-decoration: underline; }
+        .states-dashboard-back:focus-visible { outline: 3px solid rgba(255,107,44,0.4); outline-offset: 4px; }
+
+        .states-header-meta {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 3px;
+        }
+
+        .states-created-date {
+          font-size: 0.74rem;
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        .states-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          flex-shrink: 0;
+        }
+
+        .states-header-actions .btn-secondary,
+        .states-header-actions .btn-primary {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          height: 38px;
+          padding: 8px 16px;
+          font-size: 0.84rem;
+          font-weight: 700;
+          box-sizing: border-box;
+          white-space: nowrap;
+        }
+
+        .states-breadcrumb button:hover {
+          text-decoration: underline;
+        }
+
+        @media (max-width: 900px) {
+          .states-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+          }
+          .states-header-actions {
+            width: 100%;
+            justify-content: flex-start;
+          }
+        }
       `}</style>
 
-      {/* Breadcrumb & Header */}
-      <header className="states-header">
-        <div className="states-header-copy">
-          <div className="states-breadcrumb">
-            <button type="button" onClick={onBack}>Dashboard</button>
-            <span>/</span>
-            <span>Geography</span>
-            <span>/</span>
-            <strong>States Management</strong>
+      {!viewState && (
+        <header className="states-header">
+          <div className="states-header-copy">
+            {onBack && (
+              <button type="button" className="states-dashboard-back" onClick={onBack}>
+                <span aria-hidden="true">←</span> Dashboard overview
+              </button>
+            )}
+            <h2>States & Jurisdictions</h2>
           </div>
-          <h2>States & Jurisdictions</h2>
-          <p>
-            Configure states, assign dedicated State Admins, monitor district coverage, officers, and operational activity.
-          </p>
-        </div>
 
-        <div className="states-header-actions">
-          {onBack && (
-            <button type="button" className="btn-secondary" onClick={onBack}>
-              ← Back to Overview
+          <div className="states-header-actions">
+            <button type="button" className="btn-primary geo-add-action" onClick={() => setIsAddModalOpen(true)}>
+              <span>+</span> Add State
             </button>
-          )}
-          <button type="button" className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
-            <span>+</span> Add State
-          </button>
-        </div>
-      </header>
+          </div>
+        </header>
+      )}
 
       {!viewState && (
         <>
@@ -523,29 +710,57 @@ export default function StatesPage({
           <span className="states-stat-badge orange">Paused</span>
         </button>
 
-        <div className="states-stat-card">
+        <button
+          type="button"
+          className={`states-stat-card interactive ${selectedMetric === 'districts' ? 'selected' : ''}`}
+          aria-pressed={selectedMetric === 'districts'}
+          onClick={() => setSelectedMetric('districts')}
+        >
           <div className="states-stat-info">
             <span className="states-stat-label">Total Districts</span>
             <span className="states-stat-value">{totalDistrictsCount}</span>
           </div>
           <span className="states-stat-badge blue">Monitored</span>
-        </div>
+        </button>
 
-        <div className="states-stat-card">
+        <button
+          type="button"
+          className={`states-stat-card interactive ${selectedMetric === 'active-zones' ? 'selected' : ''}`}
+          aria-pressed={selectedMetric === 'active-zones'}
+          onClick={() => setSelectedMetric('active-zones')}
+        >
           <div className="states-stat-info">
             <span className="states-stat-label">Active Zones</span>
             <span className="states-stat-value">{totalZonesCount}</span>
           </div>
           <span className="states-stat-badge blue">Zonal Coverage</span>
-        </div>
+        </button>
 
-        <div className="states-stat-card">
+        <button
+          type="button"
+          className={`states-stat-card interactive ${selectedMetric === 'users' ? 'selected' : ''}`}
+          aria-pressed={selectedMetric === 'users'}
+          onClick={() => setSelectedMetric('users')}
+        >
           <div className="states-stat-info">
-            <span className="states-stat-label">Users & Officers</span>
+            <span className="states-stat-label">Users</span>
             <span className="states-stat-value">{totalUsersCount.toLocaleString()}</span>
           </div>
-          <span className="states-stat-badge orange">Staff & Fleet</span>
-        </div>
+          <span className="states-stat-badge orange">All users</span>
+        </button>
+
+        <button
+          type="button"
+          className={`states-stat-card interactive ${selectedMetric === 'officers' ? 'selected' : ''}`}
+          aria-pressed={selectedMetric === 'officers'}
+          onClick={() => setSelectedMetric('officers')}
+        >
+          <div className="states-stat-info">
+            <span className="states-stat-label">Officers</span>
+            <span className="states-stat-value">{totalOfficersCount.toLocaleString()}</span>
+          </div>
+          <span className="states-stat-badge orange">Field officers</span>
+        </button>
       </section>
 
       {/* Search and Filters Toolbar */}
@@ -575,7 +790,11 @@ export default function StatesPage({
             className="bookings-filter-select states-state-select"
             aria-label="Select a state"
             value={stateFilter}
-            onChange={(e) => setStateFilter(e.target.value)}
+            onChange={(e) => {
+              setStateFilter(e.target.value)
+              setCityFilter('all')
+              setZoneFilter('all')
+            }}
           >
             <option value="all">All states ({states.length})</option>
             {stateOptions.map((st) => (
@@ -584,22 +803,63 @@ export default function StatesPage({
               </option>
             ))}
           </select>
+          <select
+            className="bookings-filter-select states-state-select"
+            aria-label="Filter by city"
+            value={cityFilter}
+            onChange={(event) => {
+              setCityFilter(event.target.value)
+              setZoneFilter('all')
+            }}
+          >
+            <option value="all">All cities ({cityOptions.length})</option>
+            {cityOptions.map((city) => (
+              <option key={city.id} value={city.id}>
+                {city.name} · {city.stateName}
+              </option>
+            ))}
+          </select>
+          <select
+            className="bookings-filter-select states-state-select"
+            aria-label="Filter by zone"
+            value={zoneFilter}
+            onChange={(event) => setZoneFilter(event.target.value)}
+          >
+            <option value="all">All zones ({zoneOptions.length})</option>
+            {zoneOptions.map((zone) => (
+              <option key={zone.id} value={zone.id}>
+                {zone.name} · {zone.cityName}
+              </option>
+            ))}
+          </select>
           {stateFilter !== 'all' && (
             <>
               <button
                 type="button"
-                className="btn-secondary"
+                className="action-btn view icon-action"
                 onClick={() => {
                   const selected = states.find((st) => st.id === stateFilter)
                   if (selected) handleOpenStateDetails(selected)
                 }}
+                aria-label={`View details for ${states.find((st) => st.id === stateFilter)?.name ?? 'selected state'}`}
+                title="View state details"
               >
-                View details
-              </button>
-              <button type="button" className="states-clear-btn" onClick={() => setStateFilter('all')}>
-                Clear
+                👁️
               </button>
             </>
+          )}
+          {(stateFilter !== 'all' || cityFilter !== 'all' || zoneFilter !== 'all') && (
+            <button
+              type="button"
+              className="states-clear-btn"
+              onClick={() => {
+                setStateFilter('all')
+                setCityFilter('all')
+                setZoneFilter('all')
+              }}
+            >
+              Clear filters
+            </button>
           )}
         </div>
 
@@ -694,36 +954,39 @@ export default function StatesPage({
                       <div className="table-actions-cell">
                         <button
                           type="button"
-                          className="action-btn view"
+                          className="action-btn view icon-action"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleOpenStateDetails(st)
                           }}
                           aria-label={`View details for ${st.name}`}
+                          title="View state"
                         >
-                          View State
+                          👁️
                         </button>
                         <button
                           type="button"
-                          className="action-btn edit"
+                          className="action-btn edit icon-action"
                           onClick={(e) => {
                             e.stopPropagation()
                             openEditModal(st)
                           }}
                           aria-label={`Edit ${st.name}`}
+                          title="Edit state"
                         >
-                          Edit
+                          ✏️
                         </button>
                         <button
                           type="button"
-                          className={`action-btn ${st.status === 'Active' ? 'toggle-deactivate' : 'toggle-activate'}`}
+                          className={`action-btn icon-action ${st.status === 'Active' ? 'toggle-deactivate' : 'toggle-activate'}`}
                           onClick={(e) => {
                             e.stopPropagation()
                             handleToggleStatus(st.id)
                           }}
                           aria-label={`${st.status === 'Active' ? 'Deactivate' : 'Activate'} ${st.name}`}
+                          title={st.status === 'Active' ? 'Deactivate state' : 'Activate state'}
                         >
-                          {st.status === 'Active' ? 'Deactivate' : 'Activate'}
+                          {st.status === 'Active' ? '🚫' : '✅'}
                         </button>
                       </div>
                     </td>
@@ -764,29 +1027,40 @@ export default function StatesPage({
         </>
       )}
 
+      {/* STATE METRIC PAGE (OPENED FROM THE STATE KPI CARDS) */}
+      {viewState && metricView && (
+        <StateMetricPage
+          state={viewState}
+          view={metricView}
+          cities={cities}
+          zones={zones}
+          onChangeView={setMetricView}
+          onBack={() => setMetricView(null)}
+          onExitState={exitStateDetails}
+          onViewBooking={setSelectedBooking}
+        />
+      )}
+
       {/* STATE DETAILS PAGE (DYNAMICALLY DRIVEN BY SELECTED STATE) */}
-      {viewState && (
-        <section
-          style={{ display: 'grid', gap: 16, marginTop: 16 }}
-          aria-labelledby="view-state-title"
-        >
-          <div className="states-header">
+      {viewState && !metricView && (
+        <>
+          <header className="states-header" aria-labelledby="view-state-title">
             <div className="states-header-copy">
               <div className="states-breadcrumb">
-                <button type="button" onClick={() => setViewState(null)}>
+                <button type="button" onClick={exitStateDetails}>
                   States
                 </button>
                 <span>›</span>
                 <span>{viewState.name}</span>
               </div>
               <h2 id="view-state-title">{viewState.name} — State Overview</h2>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3, flexWrap: 'wrap' }}>
+              <div className="states-header-meta">
                 <span className="state-code-badge">{viewState.code}</span>
                 <span className={`status-pill ${viewState.status.toLowerCase()}`}>
                   <span className="status-dot" />
                   {viewState.status}
                 </span>
-                <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                <span className="states-created-date">
                   Created: {viewState.createdDate}
                 </span>
               </div>
@@ -797,7 +1071,8 @@ export default function StatesPage({
                 className="btn-secondary"
                 onClick={() => handleToggleStatus(viewState.id)}
               >
-                {viewState.status === 'Active' ? 'Deactivate State' : 'Activate State'}
+                <span>{viewState.status === 'Active' ? '🚫' : '✅'}</span>
+                <span>{viewState.status === 'Active' ? 'Deactivate State' : 'Activate State'}</span>
               </button>
               <button
                 type="button"
@@ -807,15 +1082,20 @@ export default function StatesPage({
                   openEditModal(target)
                 }}
               >
-                Edit State
+                <span>✏️</span>
+                <span>Edit State</span>
               </button>
-              <button type="button" className="btn-primary" onClick={() => setViewState(null)}>
-                Back to States
+              <button type="button" className="btn-primary" onClick={exitStateDetails}>
+                <span>←</span>
+                <span>Back to States</span>
               </button>
             </div>
-          </div>
+          </header>
 
-          <div style={{ display: 'grid', gap: 16 }}>
+          <section
+            style={{ display: 'grid', gap: 16 }}
+            aria-labelledby="view-state-title"
+          >
             {/* 1. STATE BOOKINGS & DISTRICT METRICS SUMMARY */}
             <div className="view-section" style={{ background: '#fff' }}>
               <h4 className="view-section-title">
@@ -824,48 +1104,83 @@ export default function StatesPage({
               </h4>
 
               <div className="state-bookings-kpi-grid">
-                <div className="state-kpi-tile primary">
+                <button
+                  type="button"
+                  className="state-kpi-tile primary interactive"
+                  onClick={() => setMetricView('bookings')}
+                  title={`Open all bookings for ${viewState.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewState.bookingSummary?.total.toLocaleString() ?? '0'}
                   </span>
                   <span className="state-kpi-tile-label">Total Bookings</span>
-                </div>
-                <div className="state-kpi-tile amber">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile amber interactive"
+                  onClick={() => setMetricView('pending')}
+                  title={`Open pending bookings for ${viewState.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewState.bookingSummary?.pending.toLocaleString() ?? '0'}
                   </span>
                   <span className="state-kpi-tile-label">Pending</span>
-                </div>
-                <div className="state-kpi-tile blue">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile blue interactive"
+                  onClick={() => setMetricView('confirmed')}
+                  title={`Open confirmed bookings for ${viewState.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewState.bookingSummary?.confirmed.toLocaleString() ?? '0'}
                   </span>
                   <span className="state-kpi-tile-label">Confirmed</span>
-                </div>
-                <div className="state-kpi-tile green">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile green interactive"
+                  onClick={() => setMetricView('completed')}
+                  title={`Open completed bookings for ${viewState.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewState.bookingSummary?.completed.toLocaleString() ?? '0'}
                   </span>
                   <span className="state-kpi-tile-label">Completed</span>
-                </div>
-                <div className="state-kpi-tile red">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile red interactive"
+                  onClick={() => setMetricView('cancelled')}
+                  title={`Open cancelled bookings for ${viewState.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewState.bookingSummary?.cancelled.toLocaleString() ?? '0'}
                   </span>
                   <span className="state-kpi-tile-label">Cancelled</span>
-                </div>
-                <div className="state-kpi-tile">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile interactive"
+                  onClick={() => setMetricView('users')}
+                  title={`Open user distribution for ${viewState.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewState.totalUsers.toLocaleString()}
                   </span>
                   <span className="state-kpi-tile-label">Total Users</span>
-                </div>
-                <div className="state-kpi-tile">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile interactive"
+                  onClick={() => setMetricView('districts')}
+                  title={`Open district coverage for ${viewState.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewState.totalDistricts}
                   </span>
                   <span className="state-kpi-tile-label">Districts</span>
-                </div>
+                </button>
               </div>
             </div>
 
@@ -1076,11 +1391,12 @@ export default function StatesPage({
                           <td>
                             <button
                               type="button"
-                              className="action-btn view"
-                              style={{ padding: '5px 9px', fontSize: '0.72rem' }}
+                              className="action-btn view icon-action"
                               onClick={() => setSelectedBooking(bk)}
+                              aria-label={`View booking ${bk.id}`}
+                              title="View booking details"
                             >
-                              View Details
+                              👁️
                             </button>
                           </td>
                         </tr>
@@ -1104,8 +1420,92 @@ export default function StatesPage({
                 </table>
               </div>
             </div>
+          </section>
+        </>
+      )}
+
+      {/* VIEW BOOKING DETAILS MODAL */}
+      {selectedMetric && (
+        <div
+          className="modal-overlay"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setSelectedMetric(null)
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="state-metric-title"
+        >
+          <div className="modal-card">
+            <header className="modal-header">
+              <div className="modal-header-info">
+                <div>
+                  <h3 id="state-metric-title">
+                    {{
+                      districts: 'Districts by state',
+                      'active-zones': 'Active zones by state',
+                      users: 'Users by state',
+                      officers: 'Field officers by state',
+                    }[selectedMetric]}
+                  </h3>
+                  <span style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                    National total: {{
+                      districts: totalDistrictsCount,
+                      'active-zones': totalZonesCount,
+                      users: totalUsersCount,
+                      officers: totalOfficersCount,
+                    }[selectedMetric].toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setSelectedMetric(null)}
+                aria-label="Close metric breakdown"
+              >
+                ×
+              </button>
+            </header>
+            <div className="modal-body" style={{ gap: 0, padding: 0 }}>
+              <div className="states-table-wrap">
+                <table className="state-metric-breakdown">
+                  <thead>
+                    <tr>
+                      <th>State</th>
+                      <th>{{
+                        districts: 'Districts',
+                        'active-zones': 'Active zones',
+                        users: 'Users',
+                        officers: 'Field officers',
+                      }[selectedMetric]}</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedMetricRows.map(({ state, value }) => (
+                      <tr key={state.id}>
+                        <td><strong>{state.name}</strong> <span style={{ color: '#64748b' }}>({state.code})</span></td>
+                        <td>{value.toLocaleString()}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="action-btn view"
+                            onClick={() => {
+                              handleOpenStateDetails(state)
+                              setSelectedMetric(null)
+                            }}
+                          >
+                            View state
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </section>
+        </div>
       )}
 
       {/* VIEW BOOKING DETAILS MODAL */}
@@ -1550,7 +1950,7 @@ export default function StatesPage({
                 <button type="button" className="btn-secondary" onClick={() => setIsAddModalOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary">
+                <button type="submit" className="btn-primary geo-add-action">
                   Add State
                 </button>
               </footer>

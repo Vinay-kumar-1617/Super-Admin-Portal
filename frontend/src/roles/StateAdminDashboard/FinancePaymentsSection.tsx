@@ -178,33 +178,6 @@ export default function FinancePaymentsSection({ onOpenAudit }: FinancePaymentsS
         ))}
       </div>
 
-      <div className="finance-summary">
-        <div className="finance-summary-item">
-          <span className="sa-approval-meta">Rent collected</span>
-          <strong>{inr(totals.collected)}</strong>
-        </div>
-        <div className="finance-summary-item">
-          <span className="sa-approval-meta">Pending</span>
-          <strong>{inr(totals.pending)}</strong>
-        </div>
-        <div className="finance-summary-item">
-          <span className="sa-approval-meta">Failed</span>
-          <strong>{inr(totals.failed)}</strong>
-        </div>
-        <div className="finance-summary-item">
-          <span className="sa-approval-meta">Refunded</span>
-          <strong>{inr(totals.refunded)}</strong>
-        </div>
-        <div className="finance-summary-item">
-          <span className="sa-approval-meta">Outstanding</span>
-          <strong>{inr(totals.outstanding)}</strong>
-        </div>
-        <div className="finance-summary-item">
-          <span className="sa-approval-meta">Overdue accounts</span>
-          <strong>{totals.overdueCount}</strong>
-        </div>
-      </div>
-
       {tab === 'payments' && (
         <>
           <StatCards

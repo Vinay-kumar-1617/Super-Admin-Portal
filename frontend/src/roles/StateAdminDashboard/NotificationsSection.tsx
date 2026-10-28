@@ -68,9 +68,7 @@ export default function NotificationsSection({ onToast, onNavigate }: Notificati
       <div className="sa-panel-header">
         <div>
           <h3>Notifications</h3>
-          <span className="sa-panel-sub">
-            Pending approvals, overdue tasks, failed payments, escalations, security alerts and system announcements
-          </span>
+         
         </div>
         <div className="finance-header-controls">
           <button type="button" className="sa-btn-ghost" onClick={markAllRead} disabled={unread === 0}>

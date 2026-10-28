@@ -1,4 +1,6 @@
+// @ts-expect-error The frontend TypeScript config does not include Node's test-runner types.
 import { test } from 'node:test'
+// @ts-expect-error The frontend TypeScript config does not include Node's assertion types.
 import assert from 'node:assert/strict'
 import {
   auditLogsToCsv,

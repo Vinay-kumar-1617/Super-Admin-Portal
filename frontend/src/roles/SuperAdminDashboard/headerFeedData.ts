@@ -235,5 +235,3 @@ export const initialDashboardAlerts: DashboardAlert[] = [
     target: 'attention:payouts-awaiting-approval',
   },
 ]
-
-export const dashboardPeriods = ['This Month', 'Last Month', 'Last 90 Days', 'This Year', 'All Time']

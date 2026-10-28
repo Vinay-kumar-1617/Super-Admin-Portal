@@ -16,5 +16,5 @@ export async function getSignedInProfile(userId: string, email: string): Promise
     .maybeSingle()
 
   if (error || !data) return null
-  return { roleKey: (data as any).role_key, email }
+  return { roleKey: (data as { role_key: RoleKey }).role_key, email }
 }

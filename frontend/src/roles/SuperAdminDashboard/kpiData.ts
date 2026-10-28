@@ -22,7 +22,7 @@ export const kpiMetrics: KpiMetric[] = [
     reportedChange: '+28.0%',
     tone: 'green',
     currency: true,
-    description: 'Gross rental revenue recorded across every active Fieldwork location, shown by fiscal quarter.',
+    description: '',
     data: [31.24, 34.02, 36.86, 39.98],
     periodNoun: 'Quarter',
     periods: [
@@ -238,6 +238,7 @@ export type ActiveVehicleRecord = {
   operatorName: string
   state: string
   city: string
+  zone: string
   status: VehicleStatus
   utilization: number
   dailyRate: number
@@ -246,20 +247,20 @@ export type ActiveVehicleRecord = {
 }
 
 export const activeVehicleRecords: ActiveVehicleRecord[] = [
-  { id: 'VH-5001', equipment: 'JCB 3DX', category: 'Backhoe Loader', ownerId: 'OWN-2201', ownerName: 'Deccan Heavy Machinery', operatorId: 'OPR-3390', operatorName: 'Gopal Rao', state: 'Telangana', city: 'Hyderabad', status: 'On Hire', utilization: 92, dailyRate: 4200, lastService: '21-Sep-26', details: 'Assigned to TB-12001 at the metro excavation site.' },
-  { id: 'VH-5002', equipment: 'CAT 320 GC', category: 'Excavator', ownerId: 'OWN-2202', ownerName: 'Sri Krishna Equipment Rentals', operatorId: 'OPR-3391', operatorName: 'Ravi Teja', state: 'Telangana', city: 'Hyderabad', status: 'On Hire', utilization: 88, dailyRate: 5600, lastService: '18-Sep-26', details: 'Township project excavator on a three-month hire.' },
-  { id: 'VH-5003', equipment: 'Hydraulic Crane 25T', category: 'Crane', ownerId: 'OWN-2210', ownerName: 'Sahyadri Plant Hire', operatorId: 'OPR-3402', operatorName: 'Naresh Kumar', state: 'Maharashtra', city: 'Pune', status: 'Available', utilization: 61, dailyRate: 6800, lastService: '27-Sep-26', details: 'Serviced and idle at the Pune yard, ready for dispatch.' },
-  { id: 'VH-5004', equipment: 'Komatsu PC200', category: 'Excavator', ownerId: 'OWN-2215', ownerName: 'Karnataka Earthmovers', operatorId: 'OPR-3410', operatorName: 'Mahesh Kumar', state: 'Karnataka', city: 'Bengaluru', status: 'On Hire', utilization: 95, dailyRate: 5400, lastService: '15-Sep-26', details: 'Trenching for a data-centre build on a monthly plan.' },
-  { id: 'VH-5005', equipment: 'Compactor RM-800', category: 'Compactor', ownerId: 'OWN-2220', ownerName: 'Marina Machinery', operatorId: 'OPR-3418', operatorName: 'Imran Sheikh', state: 'Tamil Nadu', city: 'Chennai', status: 'On Hire', utilization: 79, dailyRate: 3100, lastService: '29-Sep-26', details: 'Coastal road compaction on a short daily hire.' },
-  { id: 'VH-5006', equipment: 'Tower Crane TC-6', category: 'Crane', ownerId: 'OWN-2224', ownerName: 'Capital Equipment Bank', operatorId: 'OPR-3425', operatorName: 'Venkat Rao', state: 'Delhi', city: 'Delhi', status: 'Available', utilization: 44, dailyRate: 8200, lastService: '30-Sep-26', details: 'Reserved for an upcoming high-rise booking from 12 Oct.' },
-  { id: 'VH-5007', equipment: 'MG-180 Motor Grader', category: 'Grader', ownerId: 'OWN-2231', ownerName: 'Warangal Earthmovers', operatorId: 'OPR-3433', operatorName: 'Kiran Vardhan', state: 'Telangana', city: 'Warangal', status: 'Maintenance', utilization: 0, dailyRate: 3900, lastService: '08-Oct-26', details: 'Blade hydraulic repair in progress, back on 12 Oct.' },
-  { id: 'VH-5008', equipment: 'Tipper 10W', category: 'Haulage', ownerId: 'OWN-2238', ownerName: 'North Karnataka Rentals', operatorId: 'OPR-3440', operatorName: 'Ashok Yadav', state: 'Karnataka', city: 'Hubli', status: 'On Hire', utilization: 84, dailyRate: 4600, lastService: '22-Sep-26', details: 'Aggregate hauling for a cement plant expansion.' },
-  { id: 'VH-5009', equipment: 'Schwing Stetter S4', category: 'Concrete Pump', ownerId: 'OWN-2244', ownerName: 'Kongu Plant Solutions', operatorId: 'OPR-3448', operatorName: 'Suresh Babu', state: 'Tamil Nadu', city: 'Coimbatore', status: 'Idle', utilization: 23, dailyRate: 5400, lastService: '25-Sep-26', details: 'Idle at the yard after the factory slab pour completed.' },
-  { id: 'VH-5010', equipment: 'Skid Steer S650', category: 'Skid Steer', ownerId: 'OWN-2250', ownerName: 'Deccan Heavy Machinery', operatorId: 'OPR-3455', operatorName: 'Gopal Rao', state: 'Telangana', city: 'Nalgonda', status: 'Available', utilization: 58, dailyRate: 2490, lastService: '26-Sep-26', details: 'Available for canal bank clearing from 11 Oct.' },
-  { id: 'VH-5011', equipment: 'Backhoe Loader', category: 'Backhoe Loader', ownerId: 'OWN-2262', ownerName: 'Greenfield Machinery', operatorId: 'OPR-3468', operatorName: 'Kavya Sree', state: 'Telangana', city: 'Suryapet', status: 'On Hire', utilization: 91, dailyRate: 4000, lastService: '19-Sep-26', details: 'Solar park trenching on a two-month project plan.' },
-  { id: 'VH-5012', equipment: 'Dozer D6', category: 'Dozer', ownerId: 'OWN-2210', ownerName: 'Sahyadri Plant Hire', operatorId: 'OPR-3402', operatorName: 'Naresh Kumar', state: 'Maharashtra', city: 'Mumbai', status: 'Maintenance', utilization: 0, dailyRate: 7200, lastService: '06-Oct-26', details: 'Undercarriage replacement scheduled this week.' },
-  { id: 'VH-5013', equipment: 'Boom Lift 12m', category: 'Aerial', ownerId: 'OWN-2224', ownerName: 'Capital Equipment Bank', operatorId: 'OPR-3425', operatorName: 'Venkat Rao', state: 'Delhi', city: 'Delhi', status: 'Available', utilization: 66, dailyRate: 2900, lastService: '28-Sep-26', details: 'Inspected and available for warehousing work.' },
-  { id: 'VH-5014', equipment: 'Poclain 140', category: 'Excavator', ownerId: 'OWN-2215', ownerName: 'Karnataka Earthmovers', operatorId: 'OPR-3410', operatorName: 'Mahesh Kumar', state: 'Karnataka', city: 'Mysuru', status: 'Idle', utilization: 31, dailyRate: 5100, lastService: '24-Sep-26', details: 'Idle since the irrigation contract wrapped up.' },
+  { id: 'VH-5001', equipment: 'JCB 3DX', category: 'Backhoe Loader', ownerId: 'OWN-2201', ownerName: 'Deccan Heavy Machinery', operatorId: 'OPR-3390', operatorName: 'Gopal Rao', state: 'Telangana', city: 'Hyderabad', zone: 'Gachibowli', status: 'On Hire', utilization: 92, dailyRate: 4200, lastService: '21-Sep-26', details: 'Assigned to TB-12001 at the metro excavation site.' },
+  { id: 'VH-5002', equipment: 'CAT 320 GC', category: 'Excavator', ownerId: 'OWN-2202', ownerName: 'Sri Krishna Equipment Rentals', operatorId: 'OPR-3391', operatorName: 'Ravi Teja', state: 'Telangana', city: 'Hyderabad', zone: 'Hitech City', status: 'On Hire', utilization: 88, dailyRate: 5600, lastService: '18-Sep-26', details: 'Township project excavator on a three-month hire.' },
+  { id: 'VH-5003', equipment: 'Hydraulic Crane 25T', category: 'Crane', ownerId: 'OWN-2210', ownerName: 'Sahyadri Plant Hire', operatorId: 'OPR-3402', operatorName: 'Naresh Kumar', state: 'Maharashtra', city: 'Pune', zone: 'Hinjewadi', status: 'Available', utilization: 61, dailyRate: 6800, lastService: '27-Sep-26', details: 'Serviced and idle at the Pune yard, ready for dispatch.' },
+  { id: 'VH-5004', equipment: 'Komatsu PC200', category: 'Excavator', ownerId: 'OWN-2215', ownerName: 'Karnataka Earthmovers', operatorId: 'OPR-3410', operatorName: 'Mahesh Kumar', state: 'Karnataka', city: 'Bengaluru', zone: 'Whitefield', status: 'On Hire', utilization: 95, dailyRate: 5400, lastService: '15-Sep-26', details: 'Trenching for a data-centre build on a monthly plan.' },
+  { id: 'VH-5005', equipment: 'Compactor RM-800', category: 'Compactor', ownerId: 'OWN-2220', ownerName: 'Marina Machinery', operatorId: 'OPR-3418', operatorName: 'Imran Sheikh', state: 'Tamil Nadu', city: 'Chennai', zone: 'Guindy', status: 'On Hire', utilization: 79, dailyRate: 3100, lastService: '29-Sep-26', details: 'Coastal road compaction on a short daily hire.' },
+  { id: 'VH-5006', equipment: 'Tower Crane TC-6', category: 'Crane', ownerId: 'OWN-2224', ownerName: 'Capital Equipment Bank', operatorId: 'OPR-3425', operatorName: 'Venkat Rao', state: 'Delhi', city: 'Delhi', zone: 'Okhla', status: 'Available', utilization: 44, dailyRate: 8200, lastService: '30-Sep-26', details: 'Reserved for an upcoming high-rise booking from 12 Oct.' },
+  { id: 'VH-5007', equipment: 'MG-180 Motor Grader', category: 'Grader', ownerId: 'OWN-2231', ownerName: 'Warangal Earthmovers', operatorId: 'OPR-3433', operatorName: 'Kiran Vardhan', state: 'Telangana', city: 'Warangal', zone: 'Warangal Central', status: 'Maintenance', utilization: 0, dailyRate: 3900, lastService: '08-Oct-26', details: 'Blade hydraulic repair in progress, back on 12 Oct.' },
+  { id: 'VH-5008', equipment: 'Tipper 10W', category: 'Haulage', ownerId: 'OWN-2238', ownerName: 'North Karnataka Rentals', operatorId: 'OPR-3440', operatorName: 'Ashok Yadav', state: 'Karnataka', city: 'Hubli', zone: 'Hubli Industrial Area', status: 'On Hire', utilization: 84, dailyRate: 4600, lastService: '22-Sep-26', details: 'Aggregate hauling for a cement plant expansion.' },
+  { id: 'VH-5009', equipment: 'Schwing Stetter S4', category: 'Concrete Pump', ownerId: 'OWN-2244', ownerName: 'Kongu Plant Solutions', operatorId: 'OPR-3448', operatorName: 'Suresh Babu', state: 'Tamil Nadu', city: 'Coimbatore', zone: 'Peelamedu', status: 'Idle', utilization: 23, dailyRate: 5400, lastService: '25-Sep-26', details: 'Idle at the yard after the factory slab pour completed.' },
+  { id: 'VH-5010', equipment: 'Skid Steer S650', category: 'Skid Steer', ownerId: 'OWN-2250', ownerName: 'Deccan Heavy Machinery', operatorId: 'OPR-3455', operatorName: 'Gopal Rao', state: 'Telangana', city: 'Nalgonda', zone: 'Nalgonda Town', status: 'Available', utilization: 58, dailyRate: 2490, lastService: '26-Sep-26', details: 'Available for canal bank clearing from 11 Oct.' },
+  { id: 'VH-5011', equipment: 'Backhoe Loader', category: 'Backhoe Loader', ownerId: 'OWN-2262', ownerName: 'Greenfield Machinery', operatorId: 'OPR-3468', operatorName: 'Kavya Sree', state: 'Telangana', city: 'Suryapet', zone: 'Suryapet Town', status: 'On Hire', utilization: 91, dailyRate: 4000, lastService: '19-Sep-26', details: 'Solar park trenching on a two-month project plan.' },
+  { id: 'VH-5012', equipment: 'Dozer D6', category: 'Dozer', ownerId: 'OWN-2210', ownerName: 'Sahyadri Plant Hire', operatorId: 'OPR-3402', operatorName: 'Naresh Kumar', state: 'Maharashtra', city: 'Mumbai', zone: 'Andheri East', status: 'Maintenance', utilization: 0, dailyRate: 7200, lastService: '06-Oct-26', details: 'Undercarriage replacement scheduled this week.' },
+  { id: 'VH-5013', equipment: 'Boom Lift 12m', category: 'Aerial', ownerId: 'OWN-2224', ownerName: 'Capital Equipment Bank', operatorId: 'OPR-3425', operatorName: 'Venkat Rao', state: 'Delhi', city: 'Delhi', zone: 'Okhla', status: 'Available', utilization: 66, dailyRate: 2900, lastService: '28-Sep-26', details: 'Inspected and available for warehousing work.' },
+  { id: 'VH-5014', equipment: 'Poclain 140', category: 'Excavator', ownerId: 'OWN-2215', ownerName: 'Karnataka Earthmovers', operatorId: 'OPR-3410', operatorName: 'Mahesh Kumar', state: 'Karnataka', city: 'Mysuru', zone: 'Mysuru Central', status: 'Idle', utilization: 31, dailyRate: 5100, lastService: '24-Sep-26', details: 'Idle since the irrigation contract wrapped up.' },
 ]
 
 export type OperatorStatus = 'Available' | 'On Job' | 'Off Duty' | 'On Leave'
@@ -423,4 +424,3 @@ export function getKpiIndexFromLocation() {
 }
 
 export type BookingStatusFilter = 'All' | 'Completed' | 'Ongoing' | 'Upcoming' | 'Cancelled'
-

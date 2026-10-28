@@ -31,16 +31,27 @@ export type AuditChange = {
 export type AuditEvent = {
   id: string
   time: string
+  timestamp?: string
   actor: string
+  user?: string
   role: string
   action: string
   target: string
+  module?: 'Bookings' | 'Fleet' | 'Finance' | 'Users' | 'Pricing' | 'Compliance' | 'System' | 'Equipment' | 'Rental' | 'Payments' | AuditArea
   area: AuditArea
   state: string
   city: string
-  result: AuditResult
+  result: AuditResult | 'Failed' | 'Success'
+  status?: 'Reviewed' | 'Unreviewed'
+  riskLevel?: 'High' | 'Medium' | 'Low'
   sensitive: boolean
   amount?: string
+  recordId?: string
+  previousValues?: Record<string, string>
+  newValues?: Record<string, string>
+  riskAlerts?: string[]
+  auditorNotes?: string
+  investigationStatus?: 'Open' | 'In Progress' | 'Closed' | 'N/A'
   changes: AuditChange[]
   flagged: boolean
   note?: string
@@ -307,15 +318,26 @@ export const auditEvents: AuditEvent[] = [
   {
     id: 'AUD-9021',
     time: 'Today · 09:41',
+    timestamp: '2026-10-25T09:41:00Z',
     actor: 'Rohit Malhotra',
+    user: 'rohit.malhotra@equiphub.com',
     role: 'Super admin',
     action: 'Role granted',
     target: 'Priya Nair → City admin, Hyderabad',
+    module: 'Users',
     area: 'Access',
     state: 'Telangana',
     city: 'Hyderabad',
     result: 'Allowed',
+    status: 'Unreviewed',
+    riskLevel: 'High',
     sensitive: true,
+    recordId: 'USR-PR-221',
+    previousValues: { role_key: 'support-agent', scope_type: 'city → Hyderabad (support)', approval_limit: '₹50,000' },
+    newValues: { role_key: 'city-admin', scope_type: 'city → Hyderabad (full)', approval_limit: '₹2,00,000' },
+    riskAlerts: ['Privilege escalation detected', 'Approval limit increased 4x'],
+    auditorNotes: '',
+    investigationStatus: 'Open',
     changes: [
       { field: 'role_key', before: 'support-agent', after: 'city-admin' },
       { field: 'scope_type', before: 'city → Hyderabad (support)', after: 'city → Hyderabad (full)' },
@@ -327,16 +349,25 @@ export const auditEvents: AuditEvent[] = [
   {
     id: 'AUD-9020',
     time: 'Today · 09:12',
+    timestamp: '2026-10-25T09:12:00Z',
     actor: 'Ankit Rao',
+    user: 'ankit.rao@equiphub.com',
     role: 'Finance admin',
     action: 'Payout prepared',
     target: 'SET-7741 · Sri Krishna Equipment Rentals',
+    module: 'Finance',
     area: 'Finance',
     state: 'Telangana',
     city: 'Hyderabad',
     result: 'Allowed',
+    status: 'Reviewed',
+    riskLevel: 'Medium',
     sensitive: true,
     amount: '₹18,42,000',
+    recordId: 'SET-7741',
+    riskAlerts: ['Large payout amount'],
+    auditorNotes: 'Verified against settlement',
+    investigationStatus: 'Closed',
     changes: [
       { field: 'status', before: 'Reconciled', after: 'Payout prepared' },
       { field: 'beneficiary_bank', before: 'HDFC ••4471', after: 'HDFC ••4471' },
@@ -346,16 +377,25 @@ export const auditEvents: AuditEvent[] = [
   {
     id: 'AUD-9019',
     time: 'Today · 08:58',
+    timestamp: '2026-10-25T08:58:00Z',
     actor: 'Ankit Rao',
+    user: 'ankit.rao@equiphub.com',
     role: 'Finance admin',
     action: 'Payout approved',
     target: 'SET-7741 · Sri Krishna Equipment Rentals',
+    module: 'Finance',
     area: 'Finance',
     state: 'Telangana',
     city: 'Hyderabad',
     result: 'Allowed',
+    status: 'Unreviewed',
+    riskLevel: 'High',
     sensitive: true,
     amount: '₹18,42,000',
+    recordId: 'SET-7741',
+    riskAlerts: ['SoD violation: preparer and approver same user'],
+    auditorNotes: '',
+    investigationStatus: 'Open',
     changes: [{ field: 'status', before: 'Payout prepared', after: 'Payout approved' }],
     flagged: true,
     note: 'Same operator prepared and approved — separation-of-duties breach.',
@@ -363,15 +403,24 @@ export const auditEvents: AuditEvent[] = [
   {
     id: 'AUD-9018',
     time: 'Today · 08:30',
+    timestamp: '2026-10-25T08:30:00Z',
     actor: 'Farhan Qureshi',
+    user: 'farhan.q@equiphub.com',
     role: 'Dispatcher',
     action: 'Dispatch override',
     target: 'BK-55012 · JCB 3DX assigned to Mahesh Kumar',
+    module: 'Bookings',
     area: 'Dispatch',
     state: 'Karnataka',
     city: 'Bengaluru',
     result: 'Allowed',
+    status: 'Unreviewed',
+    riskLevel: 'Medium',
     sensitive: false,
+    recordId: 'BK-55012',
+    riskAlerts: ['Dispatch override'],
+    auditorNotes: '',
+    investigationStatus: 'Open',
     changes: [
       { field: 'assigned_driver', before: 'System pick · Ravi Teja', after: 'Manual · Mahesh Kumar' },
       { field: 'override_reason', before: '—', after: 'Driver unavailable at yard' },
