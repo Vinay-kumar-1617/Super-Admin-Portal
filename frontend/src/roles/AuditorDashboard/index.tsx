@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { commandCenterStyles } from '../commandCenterStyles'
+import RoleHeaderMenus from '../RoleHeaderMenus'
 import {
   accountRows,
   auditEvents as seedEvents,
@@ -647,10 +648,15 @@ export default function AuditorDashboard({ onSignOut }: AuditorDashboardProps) {
 
       <div className="sa-main">
         <header className="dashboard-header">
-          <div className="header-copy">
-            <p className="header-kicker">{auditorProfile.name} · Read-only audit</p>
-            <h1 className="header-title">{sectionMeta.title}</h1>
-            <div className="header-breadcrumb">Overview / Auditor / {sectionMeta.crumb}</div>
+          <div className="role-header-leading">
+            <div className="role-header-brand" aria-label="EquipHub">
+              <span className="role-header-brand-mark" aria-hidden="true">E</span>
+              <span>EquipHub</span>
+            </div>
+            <div className="header-copy">
+              <h1 className="header-title">{sectionMeta.title}</h1>
+              <div className="header-breadcrumb">Read-only audit · {auditorProfile.name}</div>
+            </div>
           </div>
 
           <div className="header-actions">
@@ -696,7 +702,7 @@ export default function AuditorDashboard({ onSignOut }: AuditorDashboardProps) {
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'notifications' ? 'is-open' : ''}`}
@@ -741,7 +747,7 @@ export default function AuditorDashboard({ onSignOut }: AuditorDashboardProps) {
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'alerts' ? 'is-open' : ''}`}
@@ -778,7 +784,7 @@ export default function AuditorDashboard({ onSignOut }: AuditorDashboardProps) {
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'period' ? 'is-open' : ''}`}
@@ -811,10 +817,32 @@ export default function AuditorDashboard({ onSignOut }: AuditorDashboardProps) {
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+              <div className="legacy-profile-control" style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
                 <div className="header-avatar">{auditorProfile.adminInitials}</div>
                 <button type="button" className="org-button" onClick={onSignOut}>Logout</button>
               </div>
+              <RoleHeaderMenus
+                notifications={notifications}
+                alerts={alerts.map((item) => ({
+                  ...item,
+                  time: 'Recent',
+                  target: 'controls',
+                }))}
+                initials={auditorProfile.adminInitials}
+                onNotificationClick={(item) => {
+                  markNotificationRead(item.id)
+                  const target = sections.find((section) => section.id === item.target)
+                  if (target) openFeedTarget(target.id)
+                }}
+                onAlertClick={(item) => {
+                  const target = sections.find((section) => section.id === item.target)
+                  if (target) openFeedTarget(target.id)
+                }}
+                onMarkAllRead={markAllNotificationsRead}
+                onSignOut={onSignOut}
+                onAlertsFooter={() => openFeedTarget('controls')}
+                alertsFooterLabel="Open control reviews"
+              />
             </div>
           </div>
         </header>

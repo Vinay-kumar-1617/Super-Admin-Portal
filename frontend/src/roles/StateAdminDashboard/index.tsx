@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { commandCenterStyles } from '../commandCenterStyles'
+import RoleHeaderMenus from '../RoleHeaderMenus'
 import {
   approvalRequests,
   approvalTypeMeta,
@@ -392,6 +393,47 @@ export default function StateAdminDashboard({ onSignOut }: StateAdminDashboardPr
           color: #fff;
         }
 
+        .stateadmin-role-dashboard .sa-account {
+          display: grid;
+          gap: 10px;
+          padding: 14px 4px 0;
+        }
+
+        .stateadmin-role-dashboard .sa-account-profile {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+          padding: 0 6px;
+        }
+
+        .stateadmin-role-dashboard .sa-account-role {
+          color: rgba(255, 255, 255, 0.68);
+        }
+
+        .stateadmin-role-dashboard .sa-account-copy span.sa-account-email {
+          color: rgba(255, 255, 255, 0.42);
+          font-size: 0.64rem;
+        }
+
+        .stateadmin-role-dashboard .sa-signout {
+          width: 100%;
+          min-height: 38px;
+          margin: 0;
+          padding: 9px 12px;
+          border: 0;
+          border-radius: 10px;
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 0.82rem;
+          text-align: left;
+          transition: background 0.18s ease, color 0.18s ease;
+        }
+
+        .stateadmin-role-dashboard .sa-signout:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: #fff;
+        }
+
         .stateadmin-role-dashboard .sa-nav-badge {
           min-width: 32px;
           height: auto;
@@ -400,13 +442,6 @@ export default function StateAdminDashboard({ onSignOut }: StateAdminDashboardPr
           color: #d9e4f2;
           font-size: 0.64rem;
           font-weight: 700;
-        }
-
-        .stateadmin-role-dashboard .dashboard-header {
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.92) 100%);
-          border-color: rgba(15, 23, 42, 0.06);
-          box-shadow: 0 24px 60px -28px rgba(15, 23, 42, 0.6);
-          backdrop-filter: blur(4px);
         }
 
         .stateadmin-role-dashboard .sa-kpi-card {
@@ -591,24 +626,30 @@ export default function StateAdminDashboard({ onSignOut }: StateAdminDashboardPr
         </div>
 
         <div className="sa-account">
-          <div className="sa-account-avatar">{stateProfile.adminInitials}</div>
-          <div className="sa-account-copy">
-            <strong>{stateProfile.adminName}</strong>
-            <span>{stateProfile.adminEmail}</span>
+          <div className="sa-account-profile">
+            <div className="sa-account-avatar" aria-hidden="true">{stateProfile.adminInitials}</div>
+            <div className="sa-account-copy">
+              <strong>{stateProfile.adminName}</strong>
+              <span className="sa-account-role">State Admin · {stateProfile.name}</span>
+              <span className="sa-account-email">{stateProfile.adminEmail}</span>
+            </div>
           </div>
           <button type="button" className="sa-signout" onClick={onSignOut}>
-            Logout
+            Sign Out
           </button>
         </div>
       </aside>
 
       <div className="sa-main">
         <header className="dashboard-header">
-          <div className="header-copy">
-            <p className="header-kicker">{stateProfile.name} · State command</p>
-            <h1 className="header-title">{sectionMeta.title}</h1>
-            <div className="header-breadcrumb">
-              Overview / {stateProfile.name} / {sectionMeta.crumb}
+          <div className="role-header-leading">
+            <div className="role-header-brand" aria-label="EquipHub">
+              <span className="role-header-brand-mark" aria-hidden="true">E</span>
+              <span>EquipHub</span>
+            </div>
+            <div className="header-copy">
+              <h1 className="header-title">{sectionMeta.title}</h1>
+              <div className="header-breadcrumb">Statewide · {stateProfile.name}</div>
             </div>
           </div>
 
@@ -659,7 +700,7 @@ export default function StateAdminDashboard({ onSignOut }: StateAdminDashboardPr
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'notifications' ? 'is-open' : ''}`}
@@ -704,7 +745,7 @@ export default function StateAdminDashboard({ onSignOut }: StateAdminDashboardPr
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'alerts' ? 'is-open' : ''}`}
@@ -749,7 +790,7 @@ export default function StateAdminDashboard({ onSignOut }: StateAdminDashboardPr
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'period' ? 'is-open' : ''}`}
@@ -781,7 +822,7 @@ export default function StateAdminDashboard({ onSignOut }: StateAdminDashboardPr
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+              <div className="legacy-profile-control" style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
                 <button
                   type="button"
                   className="header-avatar"
@@ -796,6 +837,17 @@ export default function StateAdminDashboard({ onSignOut }: StateAdminDashboardPr
                 </span>
                 <button type="button" className="org-button" onClick={onSignOut}>Logout</button>
               </div>
+              <RoleHeaderMenus
+                notifications={notifications}
+                alerts={stateAlerts}
+                initials={stateProfile.adminInitials}
+                onNotificationClick={(item) => { markNotificationRead(item.id); openFeedTarget(item.target) }}
+                onAlertClick={(item) => openFeedTarget(item.target)}
+                onMarkAllRead={markAllNotificationsRead}
+                onSignOut={onSignOut}
+                onAlertsFooter={() => openFeedTarget('approvals')}
+                alertsFooterLabel="Open approvals"
+              />
             </div>
           </div>
         </header>

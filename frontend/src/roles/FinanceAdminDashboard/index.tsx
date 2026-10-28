@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { commandCenterStyles } from '../commandCenterStyles'
+import RoleHeaderMenus from '../RoleHeaderMenus'
 import {
   financeAlerts,
   financeNotifications,
@@ -21,6 +22,13 @@ import InvoicesSection from './InvoicesSection'
 import RefundsSection from './RefundsSection'
 import ReconciliationSection from './ReconciliationSection'
 import ReportsSection from './ReportsSection'
+import AuditLogSection from './AuditLogSection'
+import NotificationsSection from './NotificationsSection'
+import ApprovalCenterSection from './ApprovalCenterSection'
+import FinancialReportsSection from './FinancialReportsSection'
+import OwnerSettlementsSection from './OwnerSettlementsSection'
+import OperatorPaymentsSection from './OperatorPaymentsSection'
+import CustomerPaymentsSection from './CustomerPaymentsSection'
 
 const sectionIds: SectionId[] = financeSections.map((section) => section.id)
 
@@ -73,12 +81,23 @@ export default function FinanceAdminDashboard({ onSignOut }: FinanceAdminDashboa
   const pendingRefunds = store.refunds.filter((item) => item.status === 'Pending').length
   const openMismatches = store.reconItems.filter((item) => item.status === 'Mismatch' || item.status === 'Investigating').length
   const activeSettlements = store.settlements.filter((item) => item.status === 'Draft' || item.status === 'Review').length
+  const pendingApprovals = store.approvalRequests.filter((item) => item.status === 'Pending' || item.status === 'Awaiting second approval').length
+  const pendingOwnerSettlements = store.ownerSettlements.filter((item) => item.status === 'Pending').length
+  const pendingOperatorPayments = store.operatorPayments.filter((item) => item.status === 'Pending').length
+  const customersWithOutstandingBalances = store.customerPayments.filter((customer) =>
+    customer.invoices.some((invoice) => invoice.amount > invoice.collected),
+  ).length
 
   const navBadges: Partial<Record<SectionId, number>> = {
     settlements: activeSettlements,
     payouts: openPayouts,
     refunds: pendingRefunds,
     reconciliation: openMismatches,
+    approvals: pendingApprovals,
+    'owner-settlements': pendingOwnerSettlements,
+    'operator-payments': pendingOperatorPayments,
+    'customer-payments': customersWithOutstandingBalances,
+    notifications: unreadNotifications,
   }
 
   const searchResults = useMemo<SearchResult[]>(() => {
@@ -120,16 +139,61 @@ export default function FinanceAdminDashboard({ onSignOut }: FinanceAdminDashboa
         push({ id: `py-${item.id}`, group: 'Payouts', label: item.payee, sub: `${item.id} · ${item.status}`, section: 'payouts' }, 4),
       )
 
+    store.operatorPayments
+      .filter((item) => item.id.toLowerCase().includes(query) || item.operator.toLowerCase().includes(query) || item.operatorCode.toLowerCase().includes(query))
+      .forEach((item) =>
+        push({ id: `op-${item.id}`, group: 'Operator payments', label: item.operator, sub: `${item.id} · ${item.period} · ${item.status}`, section: 'operator-payments' }, 4),
+      )
+
+    store.customerPayments
+      .filter((item) =>
+        item.id.toLowerCase().includes(query) ||
+        item.customer.toLowerCase().includes(query) ||
+        item.phone.toLowerCase().includes(query) ||
+        item.invoices.some((invoice) => invoice.id.toLowerCase().includes(query) || invoice.bookingId.toLowerCase().includes(query)),
+      )
+      .forEach((item) =>
+        push({ id: `customer-${item.id}`, group: 'Customer payments', label: item.customer, sub: `${item.id} · ${item.city}`, section: 'customer-payments' }, 4),
+      )
+
     store.invoices
       .filter((item) => item.id.toLowerCase().includes(query) || item.party.toLowerCase().includes(query))
       .forEach((item) =>
         push({ id: `inv-${item.id}`, group: 'Invoices', label: item.id, sub: `${item.kind} · ${item.party}`, section: 'invoices' }, 3),
       )
 
+    store.financeInvoices
+      .filter((item) =>
+        item.id.toLowerCase().includes(query) ||
+        item.customer.toLowerCase().includes(query) ||
+        item.bookingId.toLowerCase().includes(query),
+      )
+      .forEach((item) =>
+        push({ id: `fin-inv-${item.id}`, group: 'Invoices', label: item.id, sub: `${item.customer} · ${item.bookingId} · ${item.status}`, section: 'invoices' }, 4),
+      )
+
     store.refunds
       .filter((item) => item.id.toLowerCase().includes(query) || item.booking.toLowerCase().includes(query) || item.customer.toLowerCase().includes(query))
       .forEach((item) =>
         push({ id: `rf-${item.id}`, group: 'Refunds', label: item.customer, sub: `${item.id} · ${item.booking}`, section: 'refunds' }, 3),
+      )
+
+    store.approvalRequests
+      .filter(
+        (item) =>
+          item.id.toLowerCase().includes(query) ||
+          item.subject.toLowerCase().includes(query) ||
+          item.category.toLowerCase().includes(query) ||
+          item.requestedBy.toLowerCase().includes(query),
+      )
+      .forEach((item) =>
+        push({
+          id: `approval-${item.id}`,
+          group: 'Approval center',
+          label: item.subject,
+          sub: `${item.id} · ${item.category} · ${item.status}`,
+          section: 'approvals',
+        }, 4),
       )
 
     store.reconItems
@@ -145,7 +209,7 @@ export default function FinanceAdminDashboard({ onSignOut }: FinanceAdminDashboa
       )
 
     return results
-  }, [headerQuery, store.rates, store.settlements, store.payouts, store.invoices, store.refunds, store.reconItems])
+  }, [headerQuery, store.rates, store.settlements, store.payouts, store.operatorPayments, store.customerPayments, store.invoices, store.financeInvoices, store.refunds, store.approvalRequests, store.reconItems])
 
   const runSearchResult = (result: SearchResult) => {
     setHeaderPanel(null)
@@ -232,10 +296,15 @@ export default function FinanceAdminDashboard({ onSignOut }: FinanceAdminDashboa
 
       <div className="sa-main">
         <header className="dashboard-header">
-          <div className="header-copy">
-            <p className="header-kicker">Global · {financeProfile.scopeLabel} command</p>
-            <h1 className="header-title">{sectionMeta.title}</h1>
-            <div className="header-breadcrumb">Overview / Finance / {sectionMeta.crumb}</div>
+          <div className="role-header-leading">
+            <div className="role-header-brand" aria-label="EquipHub">
+              <span className="role-header-brand-mark" aria-hidden="true">E</span>
+              <span>EquipHub</span>
+            </div>
+            <div className="header-copy">
+              <h1 className="header-title">{sectionMeta.title}</h1>
+              <div className="header-breadcrumb">Global · {financeProfile.scopeLabel}</div>
+            </div>
           </div>
 
           <div className="header-actions">
@@ -285,7 +354,7 @@ export default function FinanceAdminDashboard({ onSignOut }: FinanceAdminDashboa
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'notifications' ? 'is-open' : ''}`}
@@ -326,11 +395,20 @@ export default function FinanceAdminDashboard({ onSignOut }: FinanceAdminDashboa
                         </button>
                       ))}
                     </div>
+                    <div className="header-popover-head">
+                      <button
+                        type="button"
+                        className="header-popover-action"
+                        onClick={() => navigateSection('notifications')}
+                      >
+                        View all notifications
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'alerts' ? 'is-open' : ''}`}
@@ -375,7 +453,7 @@ export default function FinanceAdminDashboard({ onSignOut }: FinanceAdminDashboa
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'period' ? 'is-open' : ''}`}
@@ -407,10 +485,21 @@ export default function FinanceAdminDashboard({ onSignOut }: FinanceAdminDashboa
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+              <div className="legacy-profile-control" style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
                 <div className="header-avatar">{financeProfile.initials}</div>
                 <button type="button" className="org-button" onClick={onSignOut}>Logout</button>
               </div>
+              <RoleHeaderMenus
+                notifications={notifications}
+                alerts={financeAlerts}
+                initials={financeProfile.initials}
+                onNotificationClick={(item) => { markNotificationRead(item.id); openFeedTarget(item.target) }}
+                onAlertClick={(item) => openFeedTarget(item.target)}
+                onMarkAllRead={markAllNotificationsRead}
+                onSignOut={onSignOut}
+                onAlertsFooter={() => openFeedTarget('reconciliation')}
+                alertsFooterLabel="Open reconciliation"
+              />
             </div>
           </div>
         </header>
@@ -444,29 +533,62 @@ export default function FinanceAdminDashboard({ onSignOut }: FinanceAdminDashboa
             />
           )}
 
+          {activeSection === 'owner-settlements' && (
+            <OwnerSettlementsSection
+              settlements={store.ownerSettlements}
+              onApprove={store.approveOwnerSettlement}
+              onReject={store.rejectOwnerSettlement}
+              onPay={store.payOwnerSettlement}
+              onPayoutMethodChange={store.updateOwnerPayoutMethod}
+            />
+          )}
+
+          {activeSection === 'operator-payments' && (
+            <OperatorPaymentsSection
+              payments={store.operatorPayments}
+              onApprove={store.approveOperatorPayment}
+              onReject={store.rejectOperatorPayment}
+              onPay={store.payOperatorPayment}
+              onMethodChange={store.changeOperatorPaymentMethod}
+            />
+          )}
+
+          {activeSection === 'customer-payments' && (
+            <CustomerPaymentsSection
+              customers={store.customerPayments}
+              onCollect={store.collectCustomerPayment}
+              onReminder={store.sendCustomerPaymentReminder}
+            />
+          )}
+
           {activeSection === 'payouts' && (
             <PayoutsSection
               payouts={store.payouts}
               approvalLimit={financeProfile.approvalLimit}
-              onApprove={store.approvePayout}
-              onSecondApproval={store.secondApproval}
+              onApprove={(id) => store.approveFinanceRequest(id, financeProfile.name)}
+              onSecondApproval={() => navigateSection('approvals')}
               onHold={store.holdPayout}
               onRelease={store.releasePayout}
-              onReject={store.rejectPayout}
+              onReject={(id, reason) => store.rejectFinanceRequest(id, financeProfile.name, reason)}
               onRetry={store.retryPayout}
             />
           )}
 
           {activeSection === 'invoices' && (
-            <InvoicesSection invoices={store.invoices} onResend={store.resendInvoice} onDownload={store.downloadInvoice} />
+            <InvoicesSection
+              invoices={store.financeInvoices}
+              onCreate={store.createInvoiceDraft}
+              onEdit={store.editInvoiceDraft}
+              onIssue={store.issueInvoice}
+              onCollect={store.collectInvoicePayment}
+            />
           )}
 
           {activeSection === 'refunds' && (
             <RefundsSection
               refunds={store.refunds}
-              onApprove={store.approveRefund}
-              onReject={store.rejectRefund}
               onProcess={store.processRefund}
+              onNavigate={navigateSection}
             />
           )}
 
@@ -480,8 +602,33 @@ export default function FinanceAdminDashboard({ onSignOut }: FinanceAdminDashboa
             />
           )}
 
+          {activeSection === 'approvals' && (
+            <ApprovalCenterSection
+              requests={store.approvalRequests}
+              audit={store.audit}
+              onApprove={store.approveFinanceRequest}
+              onReject={store.rejectFinanceRequest}
+              onCreate={store.createFinanceApprovalRequest}
+            />
+          )}
+
           {activeSection === 'reports' && (
-            <ReportsSection audit={store.audit} onExport={handleExport} onNavigate={navigateSection} />
+            <>
+              <FinancialReportsSection onNavigate={navigateSection} />
+              <ReportsSection onExport={handleExport} />
+            </>
+          )}
+
+          {activeSection === 'audit-log' && (
+            <AuditLogSection audit={store.audit} onNavigate={navigateSection} />
+          )}
+
+          {activeSection === 'notifications' && (
+            <NotificationsSection
+              notifications={notifications}
+              setNotifications={setNotifications}
+              onNavigate={navigateSection}
+            />
           )}
         </div>
       </div>

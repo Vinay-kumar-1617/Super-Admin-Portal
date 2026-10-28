@@ -1,6 +1,9 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { commandCenterStyles } from '../commandCenterStyles'
+import RoleHeaderMenus from '../RoleHeaderMenus'
 import {
+  assignmentSlots as seedAssignmentSlots,
+  confirmedBookings as seedConfirmedBookings,
   contactLog as seedContactLog,
   dashboardPeriods,
   dispatcherAlerts,
@@ -9,16 +12,20 @@ import {
   dispatcherOperators,
   dispatcherProfile,
   dispatchJobs,
+  equipmentFleet as seedEquipmentFleet,
   escalations as seedEscalations,
   permissions,
   reassignments as seedReassignments,
   seedHandoverNotes,
   zoneBoundaries,
+  type AssignmentSlot,
   type AuditEntry,
+  type Booking,
   type ContactEntry,
   type DispatcherNotification,
   type DispatcherOperator,
   type DispatchJob,
+  type Equipment,
   type Escalation,
   type HandoverNote,
   type Reassignment,
@@ -26,6 +33,7 @@ import {
 } from './dispatcherData'
 import OverviewSection from './OverviewSection'
 import DispatchSection, { type AssignAction } from './DispatchSection'
+import BookingAssignmentsSection from './BookingAssignmentsSection'
 import LiveMapSection from './LiveMapSection'
 import ReassignSection, { type ReassignAction } from './ReassignSection'
 import ContactSection, { type ContactAction } from './ContactSection'
@@ -244,6 +252,7 @@ type SectionMeta = {
 const sections: SectionMeta[] = [
   { id: 'overview', label: 'Dispatch overview', title: 'Dispatch overview', crumb: 'Overview' },
   { id: 'dispatch', label: 'Dispatch', title: 'Dispatch · dispatch.read / dispatch.assign', crumb: 'Dispatch' },
+  { id: 'booking-assignments', label: 'Booking assignments', title: 'Booking assignments', crumb: 'Booking assignments' },
   { id: 'map', label: 'Live map', title: 'Live map · operators & jobs', crumb: 'Live map' },
   { id: 'reassign', label: 'Reassignment', title: 'Reassignment · dispatch.reassign', crumb: 'Reassignment' },
   { id: 'contact', label: 'Operator contact', title: 'Operator contact · driver.contact', crumb: 'Contact' },
@@ -283,6 +292,9 @@ export default function DispatcherDashboard({ onSignOut }: DispatcherDashboardPr
   const [notes, setNotes] = useState<HandoverNote[]>(seedHandoverNotes)
   const [escalationRows, setEscalationRows] = useState<Escalation[]>(seedEscalations)
   const [audit, setAudit] = useState<AuditEntry[]>(dispatcherAudit)
+  const [bookings, setBookings] = useState<Booking[]>(seedConfirmedBookings)
+  const [equipment] = useState<Equipment[]>(seedEquipmentFleet)
+  const [assignmentSlots, setAssignmentSlots] = useState<AssignmentSlot[]>(seedAssignmentSlots)
   const [focusJobId, setFocusJobId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [auditSeq, setAuditSeq] = useState(211)
@@ -318,6 +330,50 @@ export default function DispatcherDashboard({ onSignOut }: DispatcherDashboardPr
     const id = `AU-${auditSeq}`
     setAuditSeq(auditSeq + 1)
     setAudit((prev) => [{ id, time: 'Just now', actor: dispatcherProfile.name, action, target, reason }, ...prev])
+  }
+
+  const handleBookingAssign = (assignment: {
+    bookingId: string
+    equipmentId: string
+    operatorId: string
+    startDate: string
+    endDate: string
+    startTime: string
+    durationHours: number
+  }) => {
+    const booking = bookings.find((b) => b.bookingId === assignment.bookingId)
+    const eq = equipment.find((e) => e.id === assignment.equipmentId)
+    const op = operators.find((o) => o.id === assignment.operatorId)
+    if (!booking || !eq || !op) return
+
+    setAssignmentSlots((prev) => [
+      ...prev.filter(
+        (slot) =>
+          !(slot.bookingId === assignment.bookingId) &&
+          !(
+            slot.equipmentId === assignment.equipmentId &&
+            slot.startDate === assignment.startDate &&
+            slot.startTime === assignment.startTime &&
+            slot.durationHours === assignment.durationHours
+          ),
+      ),
+      assignment,
+    ])
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.bookingId === assignment.bookingId ? { ...b, status: 'Assigned', machine: eq.machine } : b,
+      ),
+    )
+    appendAudit('Booking assigned', `${assignment.bookingId} → ${eq.machine} / ${op.name}`, `Scheduled ${assignment.startDate} ${assignment.startTime} for ${assignment.durationHours}h`)
+    showToast(`Booking ${assignment.bookingId} assigned to ${op.name}`)
+  }
+
+  const handleBookingSchedule = (bookingId: string, startDate: string, startTime: string) => {
+    setBookings((prev) =>
+      prev.map((b) => (b.bookingId === bookingId ? { ...b, status: 'Scheduled', startDate, startTime } : b)),
+    )
+    appendAudit('Booking scheduled', bookingId, `Delivery/schedule set for ${startDate} ${startTime}`)
+    showToast(`Schedule updated for ${bookingId}`)
   }
 
   const unassignedCount = jobs.filter((job) => job.status === 'Unassigned').length
@@ -566,13 +622,14 @@ export default function DispatcherDashboard({ onSignOut }: DispatcherDashboardPr
 
       <div className="sa-main">
         <header className="dashboard-header">
-          <div className="header-copy">
-            <p className="header-kicker">
-              {dispatcherProfile.city} · {dispatcherProfile.shift} shift
-            </p>
-            <h1 className="header-title">{sectionMeta.title}</h1>
-            <div className="header-breadcrumb">
-              Overview / {dispatcherProfile.state} / Dispatch / {sectionMeta.crumb}
+          <div className="role-header-leading">
+            <div className="role-header-brand" aria-label="EquipHub">
+              <span className="role-header-brand-mark" aria-hidden="true">E</span>
+              <span>EquipHub</span>
+            </div>
+            <div className="header-copy">
+              <h1 className="header-title">{sectionMeta.title}</h1>
+              <div className="header-breadcrumb">{dispatcherProfile.state} · {dispatcherProfile.city} · {dispatcherProfile.shift} shift</div>
             </div>
           </div>
 
@@ -621,7 +678,7 @@ export default function DispatcherDashboard({ onSignOut }: DispatcherDashboardPr
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'notifications' ? 'is-open' : ''}`}
@@ -666,7 +723,7 @@ export default function DispatcherDashboard({ onSignOut }: DispatcherDashboardPr
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'alerts' ? 'is-open' : ''}`}
@@ -708,7 +765,7 @@ export default function DispatcherDashboard({ onSignOut }: DispatcherDashboardPr
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'period' ? 'is-open' : ''}`}
@@ -740,10 +797,21 @@ export default function DispatcherDashboard({ onSignOut }: DispatcherDashboardPr
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+              <div className="legacy-profile-control" style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
                 <div className="header-avatar">{dispatcherProfile.initials}</div>
                 <button type="button" className="org-button" onClick={onSignOut}>Logout</button>
               </div>
+              <RoleHeaderMenus
+                notifications={notifications}
+                alerts={dispatcherAlerts}
+                initials={dispatcherProfile.initials}
+                onNotificationClick={(item) => { markNotificationRead(item.id); openFeedTarget(item.target) }}
+                onAlertClick={(item) => openFeedTarget(item.target)}
+                onMarkAllRead={markAllNotificationsRead}
+                onSignOut={onSignOut}
+                onAlertsFooter={() => openFeedTarget('overview')}
+                alertsFooterLabel="Open overview"
+              />
             </div>
           </div>
         </header>
@@ -767,6 +835,17 @@ export default function DispatcherDashboard({ onSignOut }: DispatcherDashboardPr
               audit={audit}
               focusJobId={focusJobId}
               onAssign={handleAssign}
+            />
+          )}
+
+          {activeSection === 'booking-assignments' && (
+            <BookingAssignmentsSection
+              bookings={bookings}
+              equipment={equipment}
+              operators={operators}
+              assignmentSlots={assignmentSlots}
+              onAssign={handleBookingAssign}
+              onSchedule={handleBookingSchedule}
             />
           )}
 

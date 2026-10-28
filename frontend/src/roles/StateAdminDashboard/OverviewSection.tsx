@@ -25,36 +25,49 @@ export default function OverviewSection({ approvalCounts, onOpenApprovals, onNav
 
   return (
     <>
-      <div className="sa-kpi-grid">
-        {stateKpis.map((kpi) => (
-          <button
-            key={kpi.label}
-            type="button"
-            className={`sa-kpi-card ${kpi.tone}`}
-            aria-label={`Open ${kpi.label.toLowerCase()} report`}
-            onClick={() => onNavigate(kpi.target)}
-          >
-            <div className="sa-kpi-top">
-              <span className="sa-kpi-label">{kpi.label}</span>
-              <span className="sa-kpi-change">{kpi.change}</span>
-            </div>
-            <strong className="sa-kpi-value">{kpi.value}</strong>
-            <span className="sa-kpi-desc">{kpi.description}</span>
-            <span className="sa-kpi-open">View {kpi.target} →</span>
-          </button>
-        ))}
-      </div>
+      <style>{`
+        .state-overview-section { display: grid; gap: 12px; min-width: 0; }
+        .state-overview-heading { margin: 0; color: #182230; font-size: 1rem; font-weight: 800; letter-spacing: -0.025em; }
+      `}</style>
 
-      <div className="sa-attention">
-        {attentionCards.map((card) => (
-          <button key={card.type} type="button" className="sa-attention-card" onClick={() => onOpenApprovals(card.type)}>
-            <span className="sa-attention-label">{card.label}</span>
-            <span className="sa-attention-value">{String(approvalCounts[card.type]).padStart(2, '0')}</span>
-          </button>
-        ))}
-      </div>
+      <section className="state-overview-section" aria-labelledby="state-overview-kpis">
+        <h2 className="state-overview-heading" id="state-overview-kpis">State overview</h2>
+        <div className="sa-kpi-grid">
+          {stateKpis.map((kpi) => (
+            <button
+              key={kpi.label}
+              type="button"
+              className={`sa-kpi-card ${kpi.tone}`}
+              aria-label={`Open ${kpi.label.toLowerCase()} report`}
+              onClick={() => onNavigate(kpi.target)}
+            >
+              <div className="sa-kpi-top">
+                <span className="sa-kpi-label">{kpi.label}</span>
+                <span className="sa-kpi-change">{kpi.change}</span>
+              </div>
+              <strong className="sa-kpi-value">{kpi.value}</strong>
+              <span className="sa-kpi-desc">{kpi.description}</span>
+              <span className="sa-kpi-open">View {kpi.target} →</span>
+            </button>
+          ))}
+        </div>
+      </section>
 
-      <div className="sa-analytics-grid">
+      <section className="state-overview-section" aria-labelledby="state-overview-actions">
+        <h2 className="state-overview-heading" id="state-overview-actions">Action required</h2>
+        <div className="sa-attention">
+          {attentionCards.map((card) => (
+            <button key={card.type} type="button" className="sa-attention-card" onClick={() => onOpenApprovals(card.type)}>
+              <span className="sa-attention-label">{card.label}</span>
+              <span className="sa-attention-value">{String(approvalCounts[card.type]).padStart(2, '0')}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="state-overview-section" aria-labelledby="state-performance-heading">
+        <h2 className="state-overview-heading" id="state-performance-heading">State performance</h2>
+        <div className="sa-analytics-grid">
         <section className="sa-panel">
           <div className="sa-panel-header">
             <h3>Revenue & bookings</h3>
@@ -114,9 +127,12 @@ export default function OverviewSection({ approvalCounts, onOpenApprovals, onNav
               ))}
           </div>
         </section>
-      </div>
+        </div>
+      </section>
 
-      <div className="sa-lower-grid">
+      <section className="state-overview-section" aria-labelledby="state-operations-heading">
+        <h2 className="state-overview-heading" id="state-operations-heading">City performance & recent activity</h2>
+        <div className="sa-lower-grid">
         <section className="sa-panel">
           <div className="sa-panel-header">
             <h3>City performance</h3>
@@ -178,7 +194,8 @@ export default function OverviewSection({ approvalCounts, onOpenApprovals, onNav
             ))}
           </div>
         </section>
-      </div>
+        </div>
+      </section>
     </>
   )
 }

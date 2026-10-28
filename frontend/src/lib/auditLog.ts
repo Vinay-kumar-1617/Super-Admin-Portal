@@ -652,6 +652,32 @@ export function loadDemoAuditLogs(filters: AuditLogFilters = {}, scope?: AuditSc
   }
 }
 
+type AuditLogRow = {
+  id: string
+  created_at: string
+  actor_id: string | null
+  actor_email: string | null
+  actor_name: string | null
+  actor_role: string | null
+  action: string
+  action_label: string
+  entity_type: string | null
+  entity_id: string | null
+  entity_label: string | null
+  state_id: string | null
+  city_id: string | null
+  zone_id: string | null
+  state_name: string | null
+  city_name: string | null
+  zone_name: string | null
+  previous_values: Record<string, unknown> | null
+  new_values: Record<string, unknown> | null
+  outcome: string
+  ip_address: string | null
+  user_agent: string | null
+  metadata: Record<string, unknown> | null
+}
+
 export async function fetchAuditLogs(filters: AuditLogFilters = {}, profile: AuditProfile): Promise<AuditLogsResult> {
   const scope = resolveAuditScope({
     roleKey: profile.roleKey,
@@ -689,7 +715,7 @@ export async function fetchAuditLogs(filters: AuditLogFilters = {}, profile: Aud
   if (error || !data) {
     return loadDemoAuditLogs(filters, scope)
   }
-  const records = (data as any[]).map((row) => ({
+  const records = (data as unknown as AuditLogRow[]).map((row) => ({
     id: row.id,
     createdAt: row.created_at,
     actorId: row.actor_id,

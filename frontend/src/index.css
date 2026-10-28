@@ -1,7 +1,7 @@
 :root {
-  font-family: 'Avenir Next', 'Segoe UI', sans-serif;
-  color: #111827;
-  background: #f5f2ee;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text-primary);
+  background: var(--background);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -9,6 +9,96 @@
   font-optical-sizing: auto;
   font-weight: 400;
   font-size: 14px;
+  color-scheme: light;
+}
+
+:root,
+:root[data-theme='light'] {
+  --primary: #c2410c;
+  --primary-dark: #9a3412;
+  --primary-light: #ffedd5;
+  --emphasis: #b45309;
+  --operator-accent: #0f766e;
+  --admin-accent: #7c3aed;
+  --background: #f4f6f9;
+  --surface: #ffffff;
+  --surface-elevated: #f8fafc;
+  --surface-border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #5f6d84;
+  --text-inverse: #ffffff;
+  --success: #15803d;
+  --success-bg: #dcfce7;
+  --warning: #b45309;
+  --warning-bg: #fef3c7;
+  --error: #b91c1c;
+  --error-bg: #fee2e2;
+  --info: #0369a1;
+  --info-bg: #e0f2fe;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .05);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, .07);
+  --shadow-lg: 0 20px 48px rgba(15, 23, 42, .1);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --primary: #f97316;
+  --primary-dark: #ea6c0a;
+  --primary-light: #fed7aa;
+  --emphasis: #fbbf24;
+  --operator-accent: #2dd4bf;
+  --admin-accent: #a78bfa;
+  --background: #0f1117;
+  --surface: #1a1f2e;
+  --surface-elevated: #222839;
+  --surface-border: #2d3447;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #8290a8;
+  --text-inverse: #0f1117;
+  --success: #22c55e;
+  --success-bg: #052e16;
+  --warning: #fbbf24;
+  --warning-bg: #1c1400;
+  --error: #f05050;
+  --error-bg: #1f0707;
+  --info: #38bdf8;
+  --info-bg: #082f49;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .2);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, .25);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, .35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    color-scheme: dark;
+    --primary: #f97316;
+    --primary-dark: #ea6c0a;
+    --primary-light: #fed7aa;
+    --emphasis: #fbbf24;
+    --operator-accent: #2dd4bf;
+    --admin-accent: #a78bfa;
+    --background: #0f1117;
+    --surface: #1a1f2e;
+    --surface-elevated: #222839;
+    --surface-border: #2d3447;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #8290a8;
+    --text-inverse: #0f1117;
+    --success: #22c55e;
+    --success-bg: #052e16;
+    --warning: #fbbf24;
+    --warning-bg: #1c1400;
+    --error: #f05050;
+    --error-bg: #1f0707;
+    --info: #38bdf8;
+    --info-bg: #082f49;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .2);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, .25);
+    --shadow-lg: 0 20px 48px rgba(0, 0, 0, .35);
+  }
 }
 
 * {
@@ -24,12 +114,14 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: #f5f2ee;
-  color: #111827;
+  background: var(--background);
+  color: var(--text-primary);
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -40,6 +132,11 @@ input {
 }
 
 ::selection {
-  color: #1d302b;
-  background: #dce8be;
+  color: var(--text-inverse);
+  background: var(--primary-light);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }

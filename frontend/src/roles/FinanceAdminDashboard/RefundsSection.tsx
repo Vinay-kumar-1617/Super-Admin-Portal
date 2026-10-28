@@ -1,17 +1,16 @@
 import { useMemo, useState } from 'react'
 import { StatusPill } from './shared'
-import type { Refund, RefundStatus } from './financeAdminData'
+import type { Refund, RefundStatus, SectionId } from './financeAdminData'
 
 type RefundsSectionProps = {
   refunds: Refund[]
-  onApprove: (id: string) => void
-  onReject: (id: string) => void
   onProcess: (id: string) => void
+  onNavigate: (id: SectionId) => void
 }
 
 const statusFilters: Array<'All' | RefundStatus> = ['All', 'Pending', 'Approved', 'Processed', 'Rejected']
 
-export default function RefundsSection({ refunds, onApprove, onReject, onProcess }: RefundsSectionProps) {
+export default function RefundsSection({ refunds, onProcess, onNavigate }: RefundsSectionProps) {
   const [statusFilter, setStatusFilter] = useState<'All' | RefundStatus>('All')
   const [query, setQuery] = useState('')
 
@@ -129,14 +128,9 @@ export default function RefundsSection({ refunds, onApprove, onReject, onProcess
                   <td>
                     <span className="sa-inline-edit">
                       {item.status === 'Pending' && (
-                        <>
-                          <button type="button" className="sa-btn approve" onClick={() => onApprove(item.id)}>
-                            Approve
-                          </button>
-                          <button type="button" className="sa-btn reject" onClick={() => onReject(item.id)}>
-                            Reject
-                          </button>
-                        </>
+                        <button type="button" className="sa-btn approve" onClick={() => onNavigate('approvals')}>
+                          Review in approval center
+                        </button>
                       )}
                       {item.status === 'Approved' && (
                         <button type="button" className="sa-btn approve" onClick={() => onProcess(item.id)}>

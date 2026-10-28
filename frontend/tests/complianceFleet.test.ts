@@ -1,4 +1,6 @@
+// @ts-expect-error Node.js type definitions are not configured for this project.
 import { test } from 'node:test'
+// @ts-expect-error Node.js type definitions are not configured for this project.
 import assert from 'node:assert/strict'
 import {
   alertTargetSection,
@@ -22,7 +24,7 @@ const seedExpiries = [
   { id: 'EX-84', subject: 'Ravi Teja', ownerType: 'Driver', kind: 'Document', item: 'Operator badge', city: 'Hyderabad', expiresOn: '13 Oct 2026', daysLeft: 5, reminded: false },
   { id: 'EX-83', subject: 'Warangal Earthmovers', ownerType: 'Partner', kind: 'Document', item: 'Liability insurance', city: 'Warangal', expiresOn: '15 Oct 2026', daysLeft: 7, reminded: false },
   { id: 'EX-82', subject: 'TS-09-MM-2287', ownerType: 'Partner', kind: 'Document', item: 'Insurance', city: 'Hyderabad', expiresOn: '30 Nov 2026', daysLeft: 53, reminded: false },
-]
+] satisfies Parameters<typeof computeComplianceMetrics>[0]['expiries']
 
 const metrics = computeComplianceMetrics({
   vehicles: fleetVehicles,

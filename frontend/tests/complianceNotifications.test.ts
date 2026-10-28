@@ -1,4 +1,6 @@
+// @ts-expect-error Node test types are not available in this frontend TypeScript setup.
 import { test } from 'node:test'
+// @ts-expect-error Node assertion types are not available in this frontend TypeScript setup.
 import assert from 'node:assert/strict'
 import {
   buildComplianceNotifications,
@@ -109,7 +111,7 @@ test('preferences hide disabled categories', () => {
     categories: { ...defaultNotificationPreferences.categories, 'New violation': false },
   }
 
-  assert.equal(notificationMatchesPreferences(violation, preferences), false)
+  assert.equal(notificationMatchesPreferences(violation!, preferences), false)
   assert.equal(
     notificationMatchesPreferences(
       notifications.find((item) => item.category === 'Document expiry')!,

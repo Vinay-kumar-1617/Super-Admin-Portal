@@ -125,7 +125,7 @@ export default function BookingLedgerPage({ onBack, initialFilter, onFilterChang
           padding: 0;
           border: 0;
           background: transparent;
-          color: #ef4a12;
+          color: var(--brand-orange);
           font: inherit;
           font-weight: 800;
           cursor: pointer;
@@ -364,11 +364,10 @@ export default function BookingLedgerPage({ onBack, initialFilter, onFilterChang
       <header className="booking-ledger-header">
         <div>
           <button type="button" className="booking-ledger-back" onClick={onBack}>← Back to Total Revenue</button>
-          <p>Super Admin / Finance / October sample</p>
+          <p>Super Admin / Finance / October</p>
           <h1>Booking Ledger</h1>
           <p>Booking-level revenue and commission · 01–04 Oct 2026</p>
         </div>
-        <span className="booking-ledger-badge">Illustrative dummy data</span>
       </header>
 
       <section className="booking-ledger-summary" aria-label="Booking totals">

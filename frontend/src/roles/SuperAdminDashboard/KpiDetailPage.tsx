@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { activeCityRecords, activeOperatorRecords, activeVehicleRecords, activeZoneRecords, commissionBookings, completedRevenueBookings, fleetPartnerRecords, formatKpiDelta, formatKpiValue, kpiMonths, operatorCommissionBySubscription, ownerCommissionRates, platformCommissionByVehicleType, revenueBookings, totalBookingRecords, type BookingCustomerType, type BookingPriority, type CityStatus, type KpiMetric, type OperatorStatus, type PartnerStatus, type SubscriptionPass, type TotalBookingStatus, type VehicleStatus, type ZoneStatus } from './kpiData'
+import { activeCityRecords, activeOperatorRecords, activeVehicleRecords, activeZoneRecords, commissionBookings, fleetPartnerRecords, formatKpiDelta, formatKpiValue, kpiMonths, operatorCommissionBySubscription, ownerCommissionRates, platformCommissionByVehicleType, totalBookingRecords, type BookingCustomerType, type BookingPriority, type CityStatus, type KpiMetric, type OperatorStatus, type PartnerStatus, type SubscriptionPass, type TotalBookingStatus, type VehicleStatus, type ZoneStatus } from './kpiData'
 
 type KpiDetailPageProps = {
   metric: KpiMetric
   onBack: () => void
-  onOpenBookingLedger: (filter: any) => void
 }
 
 function RecordSelect({ value, onChange, options, label, allLabel }: { value: string; onChange: (value: string) => void; options: string[]; label: string; allLabel: string }) {
@@ -26,7 +25,7 @@ function RecordSelect({ value, onChange, options, label, allLabel }: { value: st
   )
 }
 
-export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: KpiDetailPageProps) {
+export default function KpiDetailPage({ metric, onBack }: KpiDetailPageProps) {
   const latestValue = metric.data[metric.data.length - 1]
   const previousValue = metric.data[metric.data.length - 2]
   const startingValue = metric.data[0]
@@ -36,15 +35,9 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
   const periodPercent = startingValue === 0 ? 0 : (periodDelta / startingValue) * 100
   const averageValue = metric.data.reduce((total, value) => total + value, 0) / metric.data.length
   const maximumValue = Math.max(...metric.data)
-  const peakIndex = metric.data.indexOf(maximumValue)
-  const risingMonths = metric.data.slice(1).filter((value, index) => value > metric.data[index]).length
   const periods = metric.periods ?? kpiMonths
   const periodNoun = metric.periodNoun ?? 'Month'
   const periodNounLower = periodNoun.toLowerCase()
-  const octoberGrossRevenue = completedRevenueBookings.reduce((total: number, booking: any) => total + booking.bookingValue, 0)
-  const octoberCommission = completedRevenueBookings.reduce((total: number, booking: any) => total + booking.bookingValue * booking.commissionRate, 0)
-  const octoberNetRevenue = octoberGrossRevenue - octoberCommission
-  const cancelledBookingCount = revenueBookings.length - completedRevenueBookings.length
   const operatorPassOptions = [...new Set(commissionBookings.map((booking) => booking.operatorPass))].sort()
   const ownerPassOptions = [...new Set(commissionBookings.map((booking) => booking.ownerPass))].sort()
   const vehicleCategoryOptions = [...new Set(commissionBookings.map((booking) => booking.vehicleCategory))].sort()
@@ -66,8 +59,8 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
       rate: ownerCommissionRatesState[category] ?? 0,
       platformRate: platformCommissionRatesState[category] ?? 15,
       bookings: rows.length,
-      ownerCommission: rows.reduce((total: number, booking: any) => total + (booking.rentalValue * (ownerCommissionRatesState[category] ?? 0) / 100), 0),
-      rentalValue: rows.reduce((total: number, booking: any) => total + booking.rentalValue, 0),
+      ownerCommission: rows.reduce<number>((total, booking) => total + (booking.rentalValue * (ownerCommissionRatesState[category] ?? 0) / 100), 0),
+      rentalValue: rows.reduce<number>((total, booking) => total + booking.rentalValue, 0),
     }
   })
   const commissionSearchTerm = commissionSearch.trim().toLowerCase()
@@ -75,7 +68,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
     (booking) => (commissionVehicleType === 'All' || booking.vehicleCategory === commissionVehicleType) &&
       (commissionSearchTerm === '' || booking.id.toLowerCase().includes(commissionSearchTerm)),
   )
-  const commissionTotals = filteredCommissionBookings.reduce((totals: any, booking: any) => ({
+  const commissionTotals = filteredCommissionBookings.reduce<{ rentalValue: number; platformCommission: number; operatorShare: number; ownerShare: number }>((totals, booking) => ({
     rentalValue: totals.rentalValue + booking.rentalValue,
     platformCommission: totals.platformCommission + booking.platformCommission,
     operatorShare: totals.operatorShare + booking.operatorShare,
@@ -83,10 +76,13 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
   }), { rentalValue: 0, platformCommission: 0, operatorShare: 0, ownerShare: 0 })
   const pendingSettlementCount = filteredCommissionBookings.filter((booking) => booking.settlement === 'Pending').length
   const totalBookingValue = totalBookingRecords.reduce((total, booking) => total + booking.amount, 0)
-  const ongoingBookings = totalBookingRecords.filter((booking) => booking.status === 'Ongoing').length
-  const completedBookingRecords = totalBookingRecords.filter((booking) => booking.status === 'Completed').length
-  const upcomingBookings = totalBookingRecords.filter((booking) => booking.status === 'Upcoming').length
-  const cancelledBookingRecords = totalBookingRecords.filter((booking) => booking.status === 'Cancelled').length
+  const bookingStatusOptions: { status: TotalBookingStatus | 'All'; label: string; count: number }[] = [
+    { status: 'All', label: 'All', count: totalBookingRecords.length },
+    { status: 'Ongoing', label: 'Ongoing', count: totalBookingRecords.filter((booking) => booking.status === 'Ongoing').length },
+    { status: 'Completed', label: 'Completed', count: totalBookingRecords.filter((booking) => booking.status === 'Completed').length },
+    { status: 'Upcoming', label: 'Upcoming', count: totalBookingRecords.filter((booking) => booking.status === 'Upcoming').length },
+    { status: 'Cancelled', label: 'Cancelled', count: totalBookingRecords.filter((booking) => booking.status === 'Cancelled').length },
+  ]
   const bookingStatusClass = (status: TotalBookingStatus) => status.toLowerCase()
   const [bookingRecordFilter, setBookingRecordFilter] = useState<TotalBookingStatus | 'All'>('All')
   const [bookingRecordSearch, setBookingRecordSearch] = useState('')
@@ -109,8 +105,6 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
   const bookingCustomerTypes: BookingCustomerType[] = ['Company / Project', 'Individual / Personal']
   const [bookingCustomerTypeFilter, setBookingCustomerTypeFilter] = useState<BookingCustomerType | 'All'>('All')
   const selectBookingCustomerType = (value: string) => setBookingCustomerTypeFilter(value as BookingCustomerType | 'All')
-  const companyBookings = totalBookingRecords.filter((booking) => booking.customerType === 'Company / Project').length
-  const individualBookings = totalBookingRecords.filter((booking) => booking.customerType === 'Individual / Personal').length
   const selectBookingState = (value: string) => {
     setBookingStateFilter(value)
     setBookingCityFilter('All')
@@ -148,7 +142,10 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
       vehicle.ownerId.toLowerCase().includes(searchTerm) ||
       vehicle.ownerName.toLowerCase().includes(searchTerm) ||
       vehicle.operatorId.toLowerCase().includes(searchTerm) ||
-      vehicle.operatorName.toLowerCase().includes(searchTerm)
+      vehicle.operatorName.toLowerCase().includes(searchTerm) ||
+      vehicle.zone.toLowerCase().includes(searchTerm) ||
+      vehicle.city.toLowerCase().includes(searchTerm) ||
+      vehicle.state.toLowerCase().includes(searchTerm)
     const matchesStatus = vehicleFilter === 'All' || vehicle.status === vehicleFilter
     const matchesCategory = vehicleCategoryFilter === 'All' || vehicle.category === vehicleCategoryFilter
     return matchesSearch && matchesStatus && matchesCategory
@@ -262,7 +259,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
           margin: 0 0 8px;
           border: 0;
           background: transparent;
-          color: #ef4a12;
+          color: var(--brand-orange);
           font: inherit;
           font-weight: 800;
           cursor: pointer;
@@ -303,8 +300,18 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         }
 
         .revenue-booking-summary {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          padding: 0 18px 18px;
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          padding: 0 18px 14px;
+          gap: 8px;
+        }
+
+        .booking-record-meta {
+          display: block;
+          margin-top: 4px;
+          color: var(--muted);
+          font-size: 0.76rem;
+          white-space: nowrap;
         }
 
         .kpi-detail-summary-card {
@@ -806,6 +813,118 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
           gap: 10px;
         }
 
+        .booking-record-filter-toolbar {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(120px, 1fr)) minmax(190px, 1.5fr);
+          align-items: center;
+          gap: 10px;
+          padding: 12px 18px;
+          border-bottom: 1px solid rgba(15,23,42,0.07);
+        }
+
+        .booking-advanced-filters {
+          padding: 0 18px;
+          border-bottom: 1px solid rgba(15,23,42,0.07);
+        }
+
+        .booking-advanced-filters summary {
+          width: fit-content;
+          padding: 10px 0;
+          color: var(--muted);
+          font-size: 0.78rem;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .booking-advanced-fields {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(160px, 220px));
+          gap: 10px;
+          padding: 0 0 12px;
+        }
+
+        .booking-status-filters {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          overflow-x: auto;
+          padding: 10px 18px;
+          border-bottom: 1px solid rgba(15,23,42,0.07);
+        }
+
+        .booking-status-filter {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          flex: 0 0 auto;
+          min-height: 34px;
+          padding: 6px 10px;
+          border: 1px solid transparent;
+          border-radius: 8px;
+          background: transparent;
+          color: var(--muted);
+          font: inherit;
+          font-size: 0.78rem;
+          cursor: pointer;
+        }
+
+        .booking-status-filter strong {
+          color: var(--text);
+          font-size: 0.72rem;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .booking-status-filter:hover { background: var(--panel-soft); }
+        .booking-status-filter[aria-pressed='true'] {
+          border-color: var(--line);
+          background: var(--panel-soft);
+          color: var(--text);
+          font-weight: 700;
+        }
+
+        .booking-record-filter-toolbar .record-select-label {
+          display: none;
+        }
+
+        .booking-record-filter-toolbar .record-select,
+        .booking-record-filter-toolbar .record-select-input,
+        .booking-record-filter-toolbar .record-search-input {
+          width: 100%;
+          min-width: 0;
+          height: 40px;
+        }
+
+        .booking-record-filter-toolbar .chip {
+          justify-self: end;
+          white-space: nowrap;
+        }
+
+        @media (max-width: 1200px) {
+          .booking-record-filter-toolbar {
+            grid-template-columns: repeat(3, minmax(130px, 1fr));
+          }
+
+          .booking-record-filter-toolbar .chip {
+            justify-self: start;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .booking-record-filter-toolbar {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            padding: 12px;
+          }
+
+          .booking-record-filter-toolbar .record-search-input {
+            grid-column: 1 / -1;
+          }
+
+          .booking-status-filters { padding: 8px 12px; }
+          .booking-advanced-filters { padding: 0 12px; }
+          .booking-advanced-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .booking-record-meta { margin-left: 0; white-space: normal; }
+        }
+
         .record-select {
           display: inline-flex;
           align-items: center;
@@ -848,7 +967,9 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         }
 
         .vehicle-utilization-track {
-          width: 54px;
+          display: inline-block;
+          flex: none;
+          width: 64px;
           height: 6px;
           border-radius: 999px;
           background: rgba(15,23,42,0.1);
@@ -856,9 +977,16 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         }
 
         .vehicle-utilization-fill {
+          display: block;
           height: 100%;
           border-radius: 999px;
           background: #08a66c;
+        }
+
+        .vehicle-utilization-value {
+          min-width: 36px;
+          font-variant-numeric: tabular-nums;
+          font-weight: 700;
         }
 
         .kpi-detail-table td.vehicle-record-details {
@@ -869,6 +997,29 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         .kpi-detail-table td.booking-record-details {
           min-width: 260px;
           white-space: normal;
+        }
+
+        .kpi-detail-table.booking-record-table {
+          width: 100%;
+          min-width: 1760px;
+          table-layout: fixed;
+        }
+
+        .booking-record-table th,
+        .booking-record-table td {
+          vertical-align: middle;
+        }
+
+        .booking-record-table .booking-record-entity {
+          min-width: 0;
+          white-space: normal;
+          overflow-wrap: anywhere;
+        }
+
+        .booking-record-table td.booking-record-details {
+          min-width: 0;
+          white-space: normal;
+          overflow-wrap: anywhere;
         }
 
         .booking-record-entity {
@@ -911,8 +1062,16 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         }
 
         .kpi-detail-summary-card.metric-card {
-          gap: 9px;
-          border-left: 4px solid rgba(15,23,42,0.12);
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-rows: auto auto;
+          align-items: center;
+          gap: 3px 10px;
+          min-height: 64px;
+          padding: 10px 12px;
+          border-left: 2px solid var(--surface-border);
+          border-radius: 10px;
+          box-shadow: var(--shadow-sm);
           transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
 
@@ -922,51 +1081,63 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         }
 
         .kpi-detail-summary-card.metric-card strong {
-          font-size: 1.5rem;
-          letter-spacing: -0.04em;
+          grid-column: 2;
+          grid-row: 1 / span 2;
+          align-self: center;
+          color: var(--text-primary) !important;
+          font-size: 1.15rem;
+          letter-spacing: -0.03em;
+          white-space: nowrap;
         }
 
         .metric-card-top {
           display: flex;
           align-items: center;
-          gap: 9px;
+          grid-column: 1;
+          grid-row: 1;
+          min-width: 0;
+          border: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+          text-decoration: none;
+          color: var(--text-primary);
+          font-size: 0.76rem;
+          font-weight: 600;
+        }
+
+        .metric-card-top::before,
+        .metric-card-top::after,
+        .metric-card-top > span::before,
+        .metric-card-top > span::after {
+          content: none !important;
+          display: none !important;
+        }
+
+        .metric-card-top > span:not(.metric-card-icon) {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .metric-card-icon {
-          display: grid;
-          place-items: center;
-          width: 30px;
-          height: 30px;
-          border-radius: 9px;
-          font-size: 0.92rem;
-          font-weight: 800;
-          background: rgba(100,116,139,0.12);
-          color: #475569;
-          flex: 0 0 auto;
+          display: none;
         }
 
-        .metric-card.accent-slate { border-left-color: #64748b; }
-        .metric-card.accent-slate .metric-card-icon { background: rgba(100,116,139,0.15); color: #334155; }
+        .kpi-detail-summary-card.metric-card small {
+          grid-column: 1;
+          grid-row: 2;
+          color: var(--text-muted);
+          font-size: 0.68rem;
+          line-height: 1.2;
+        }
 
-        .metric-card.accent-green { border-left-color: #08a66c; }
-        .metric-card.accent-green strong { color: #078653; }
-        .metric-card.accent-green .metric-card-icon { background: rgba(8,166,108,0.15); color: #078653; }
+        @media (max-width: 1200px) {
+          .revenue-booking-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
 
-        .metric-card.accent-red { border-left-color: #ef4444; }
-        .metric-card.accent-red strong { color: #dc2626; }
-        .metric-card.accent-red .metric-card-icon { background: rgba(239,68,68,0.15); color: #dc2626; }
-
-        .metric-card.accent-orange { border-left-color: #ff6b2c; }
-        .metric-card.accent-orange strong { color: #c94310; }
-        .metric-card.accent-orange .metric-card-icon { background: rgba(255,107,44,0.16); color: #c94310; }
-
-        .metric-card.accent-blue { border-left-color: #2563eb; }
-        .metric-card.accent-blue strong { color: #1d4ed8; }
-        .metric-card.accent-blue .metric-card-icon { background: rgba(37,99,235,0.15); color: #1d4ed8; }
-
-        .metric-card.accent-purple { border-left-color: #7c3aed; }
-        .metric-card.accent-purple strong { color: #6d28d9; }
-        .metric-card.accent-purple .metric-card-icon { background: rgba(124,58,237,0.15); color: #6d28d9; }
+        @media (max-width: 640px) {
+          .revenue-booking-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 12px 12px; }
+        }
       `}</style>
 
       <header className="dashboard-header">
@@ -974,9 +1145,8 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
           <button type="button" className="kpi-detail-back" onClick={onBack}>
             <span aria-hidden="true">←</span> Dashboard overview
           </button>
-          <p className="header-kicker">National overview / KPI detail</p>
+          
           <h1 className="header-title">{metric.label}</h1>
-          <div className="header-breadcrumb">{periods[0].full} to {periods[periods.length - 1].full} · {periods.length} {periodNounLower}ly samples</div>
         </div>
         <div className="kpi-detail-period-change">
           <span>Change since {periods[0].short}</span>
@@ -984,13 +1154,11 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         </div>
       </header>
 
-      <p className="health-meta">{metric.description}</p>
-
       <section className="kpi-detail-summary" aria-label="KPI summary">
         <article className="kpi-detail-summary-card">
           <span>Latest period · {periods[periods.length - 1].short}</span>
           <strong>{formatKpiValue(metric, latestValue)}</strong>
-          <small>Current sample value</small>
+          <small>Current value</small>
         </article>
         <article className="kpi-detail-summary-card">
           <span>Change vs {periods[periods.length - 2].short}</span>
@@ -1000,26 +1168,13 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         <article className="kpi-detail-summary-card">
           <span>Change since {periods[0].short}</span>
           <strong>{formatKpiDelta(metric, periodDelta)}</strong>
-          <small>{periodPercent >= 0 ? '+' : ''}{periodPercent.toFixed(1)}% across the sample</small>
+          <small>{periodPercent >= 0 ? '+' : ''}{periodPercent.toFixed(1)}% across the period</small>
         </article>
         <article className="kpi-detail-summary-card">
           <span>Period average</span>
           <strong>{formatKpiValue(metric, averageValue)}</strong>
-          <small>Average of {periods.length} {periodNounLower}ly samples</small>
+          <small>Average across {periods.length} periods</small>
         </article>
-      </section>
-
-      <section className="kpi-detail-insight" aria-label="Trend insight">
-        <div>
-          <h3>Trend readout</h3>
-          <p>
-            {risingMonths === metric.data.length - 1
-              ? `The KPI rose in all ${risingMonths} ${periodNounLower}-to-${periodNounLower} comparisons.`
-              : `The KPI rose in ${risingMonths} of ${metric.data.length - 1} ${periodNounLower}-to-${periodNounLower} comparisons.`}
-            {' '}Its highest sample was recorded in {periods[peakIndex].full}.
-          </p>
-        </div>
-        <strong>{formatKpiValue(metric, maximumValue)} peak</strong>
       </section>
 
       {metric.label === 'Platform Commission' && (
@@ -1028,7 +1183,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
             <div className="panel-header">
               <div>
                 <h3 id="commission-flow-title">Commission and settlement flow</h3>
-                <span className="health-meta">How customer rental payments are allocated and reconciled · illustrative sample</span>
+                <span className="health-meta">How customer rental payments are allocated and reconciled</span>
               </div>
               <span className="chip active">{filteredCommissionBookings.length} bookings</span>
             </div>
@@ -1084,7 +1239,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
               </div>
               <div className="panel-header-tools">
                 <RecordSelect value={commissionVehicleType} onChange={setCommissionVehicleType} options={vehicleCategoryOptions} label="Vehicle type" allLabel="All vehicle types" />
-                <span className="chip active">Dummy data</span>
+               
               </div>
             </div>
             <div className="chart-wrap kpi-detail-table-wrap">
@@ -1164,7 +1319,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
                   placeholder="Search booking ID"
                   aria-label="Search commission bookings by ID"
                 />
-                <span className="chip active">Dummy data</span>
+               
               </div>
             </div>
             <div className="chart-wrap kpi-detail-table-wrap">
@@ -1228,169 +1383,74 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
                 </tfoot>
               </table>
             </div>
-            <p className="kpi-detail-source">Illustrative booking-level settlement data for interface preview; these amounts are separate from the monthly Platform Commission KPI samples.</p>
           </section>
         </>
-      )}
-
-      {metric.label === 'Total Revenue' && (
-        <section className="panel revenue-panel" aria-label="October booking sample">
-          <section className="revenue-summary" aria-label="October booking KPIs">
-            <button
-              type="button"
-              className="kpi-detail-summary-card metric-card accent-slate"
-              aria-label={`View all ${revenueBookings.length} booking records in the ledger`}
-              onClick={() => onOpenBookingLedger('All')}
-            >
-              <span className="metric-card-top"><span className="metric-card-icon">▤</span><span>All booking records</span></span>
-              <strong>{revenueBookings.length}</strong>
-              <small>View all records</small>
-            </button>
-            <button
-              type="button"
-              className="kpi-detail-summary-card metric-card accent-green"
-              aria-label={`View ${completedRevenueBookings.length} completed bookings in the ledger`}
-              onClick={() => onOpenBookingLedger('Completed')}
-            >
-              <span className="metric-card-top"><span className="metric-card-icon">✓</span><span>Completed</span></span>
-              <strong>{completedRevenueBookings.length}</strong>
-              <small>Included in revenue totals</small>
-            </button>
-            <button
-              type="button"
-              className="kpi-detail-summary-card metric-card accent-red"
-              aria-label={`View ${cancelledBookingCount} cancelled bookings in the ledger`}
-              onClick={() => onOpenBookingLedger('Cancelled')}
-            >
-              <span className="metric-card-top"><span className="metric-card-icon">✕</span><span>Cancelled</span></span>
-              <strong>{cancelledBookingCount}</strong>
-              <small>Excluded from revenue totals</small>
-            </button>
-            <article className="kpi-detail-summary-card metric-card accent-orange">
-              <span className="metric-card-top"><span className="metric-card-icon">₹</span><span>Gross revenue</span></span>
-              <strong>₹{octoberGrossRevenue.toLocaleString('en-IN')}</strong>
-              <small>Completed bookings only</small>
-            </article>
-            <article className="kpi-detail-summary-card metric-card accent-purple">
-              <span className="metric-card-top"><span className="metric-card-icon">%</span><span>Commission</span></span>
-              <strong>₹{octoberCommission.toLocaleString('en-IN')}</strong>
-              <small>15% of booking value</small>
-            </article>
-            <article className="kpi-detail-summary-card metric-card accent-blue">
-              <span className="metric-card-top"><span className="metric-card-icon">◈</span><span>Net revenue</span></span>
-              <strong>₹{octoberNetRevenue.toLocaleString('en-IN')}</strong>
-              <small>Gross less commission</small>
-            </article>
-          </section>
-        </section>
       )}
 
       {metric.label === 'Total Bookings' && (
         <section className="panel" aria-labelledby="total-bookings-title">
           <div className="panel-header">
             <div>
-              <h3 id="total-bookings-title">Booking records sample</h3>
-              <span className="health-meta">Showing {filteredBookingRecords.length} of {totalBookingRecords.length} records · filter by status, priority, customer type, plan, state, city or zone</span>
-            </div>
-            <div className="panel-header-tools">
-              <RecordSelect value={bookingStateFilter} onChange={selectBookingState} options={bookingStates} label="State" allLabel="All states" />
-              <RecordSelect value={bookingCityFilter} onChange={selectBookingCity} options={bookingCities} label="City" allLabel="All cities" />
-              <RecordSelect value={bookingZoneFilter} onChange={setBookingZoneFilter} options={bookingZones} label="Zone" allLabel="All zones" />
-              <RecordSelect value={bookingPlanFilter} onChange={setBookingPlanFilter} options={bookingPlans} label="Plan" allLabel="All plans" />
-              <RecordSelect value={bookingPriorityFilter} onChange={selectBookingPriority} options={bookingPriorities} label="Priority" allLabel="All priorities" />
-              <RecordSelect value={bookingCustomerTypeFilter} onChange={selectBookingCustomerType} options={bookingCustomerTypes} label="Customer" allLabel="All customers" />
-              <input
-                type="text"
-                className="record-select-input record-search-input"
-                value={bookingRecordSearch}
-                onChange={(event) => setBookingRecordSearch(event.target.value)}
-                placeholder="Search booking ID"
-                aria-label="Search booking records by ID"
-              />
-              <span className="chip active">Dummy data</span>
+              <h3 id="total-bookings-title">Booking records</h3>
+              <span className="booking-record-meta">
+                {filteredBookingRecords.length} of {totalBookingRecords.length} · Total value ₹{totalBookingValue.toLocaleString('en-IN')}
+              </span>
             </div>
           </div>
+          <div className="booking-record-filter-toolbar" aria-label="Booking record filters">
+            <input
+              type="text"
+              className="record-select-input record-search-input"
+              value={bookingRecordSearch}
+              onChange={(event) => setBookingRecordSearch(event.target.value)}
+              placeholder="Search booking ID"
+              aria-label="Search booking records by ID"
+            />
+            <RecordSelect value={bookingStateFilter} onChange={selectBookingState} options={bookingStates} label="State" allLabel="All states" />
+            <RecordSelect value={bookingCityFilter} onChange={selectBookingCity} options={bookingCities} label="City" allLabel="All cities" />
+            <RecordSelect value={bookingZoneFilter} onChange={setBookingZoneFilter} options={bookingZones} label="Zone" allLabel="All zones" />
+            <RecordSelect value={bookingCustomerTypeFilter} onChange={selectBookingCustomerType} options={bookingCustomerTypes} label="Customer" allLabel="All customers" />
+          </div>
 
-          <section className="kpi-detail-summary revenue-booking-summary" aria-label="Booking record KPIs">
-            <button
-              type="button"
-              className={`kpi-detail-summary-card metric-card accent-slate ${bookingRecordFilter === 'All' ? 'selected' : ''}`}
-              aria-pressed={bookingRecordFilter === 'All'}
-              onClick={() => setBookingRecordFilter('All')}
-            >
-              <span className="metric-card-top"><span className="metric-card-icon">▤</span><span>Total bookings</span></span>
-              <strong>{totalBookingRecords.length}</strong>
-              <small>All sample records</small>
-            </button>
-            <button
-              type="button"
-              className={`kpi-detail-summary-card metric-card accent-blue ${bookingRecordFilter === 'Ongoing' ? 'selected' : ''}`}
-              aria-pressed={bookingRecordFilter === 'Ongoing'}
-              onClick={() => setBookingRecordFilter('Ongoing')}
-            >
-              <span className="metric-card-top"><span className="metric-card-icon">▶</span><span>Ongoing</span></span>
-              <strong>{ongoingBookings}</strong>
-              <small>Currently on hire</small>
-            </button>
-            <button
-              type="button"
-              className={`kpi-detail-summary-card metric-card accent-green ${bookingRecordFilter === 'Completed' ? 'selected' : ''}`}
-              aria-pressed={bookingRecordFilter === 'Completed'}
-              onClick={() => setBookingRecordFilter('Completed')}
-            >
-              <span className="metric-card-top"><span className="metric-card-icon">✓</span><span>Completed</span></span>
-              <strong>{completedBookingRecords}</strong>
-              <small>Closed bookings</small>
-            </button>
-            <button
-              type="button"
-              className={`kpi-detail-summary-card metric-card accent-orange ${bookingRecordFilter === 'Upcoming' ? 'selected' : ''}`}
-              aria-pressed={bookingRecordFilter === 'Upcoming'}
-              onClick={() => setBookingRecordFilter('Upcoming')}
-            >
-              <span className="metric-card-top"><span className="metric-card-icon">◔</span><span>Upcoming</span></span>
-              <strong>{upcomingBookings}</strong>
-              <small>Scheduled bookings</small>
-            </button>
-            <button
-              type="button"
-              className={`kpi-detail-summary-card metric-card accent-red ${bookingRecordFilter === 'Cancelled' ? 'selected' : ''}`}
-              aria-pressed={bookingRecordFilter === 'Cancelled'}
-              onClick={() => setBookingRecordFilter('Cancelled')}
-            >
-              <span className="metric-card-top"><span className="metric-card-icon">✕</span><span>Cancelled</span></span>
-              <strong>{cancelledBookingRecords}</strong>
-              <small>Not fulfilled</small>
-            </button>
-            <article className="kpi-detail-summary-card metric-card accent-purple">
-              <span className="metric-card-top"><span className="metric-card-icon">₹</span><span>Booking value</span></span>
-              <strong>₹{totalBookingValue.toLocaleString('en-IN')}</strong>
-              <small>All listed records</small>
-            </article>
-            <button
-              type="button"
-              className={`kpi-detail-summary-card metric-card accent-blue ${bookingCustomerTypeFilter === 'Company / Project' ? 'selected' : ''}`}
-              aria-pressed={bookingCustomerTypeFilter === 'Company / Project'}
-              onClick={() => setBookingCustomerTypeFilter(bookingCustomerTypeFilter === 'Company / Project' ? 'All' : 'Company / Project')}
-            >
-              <span className="metric-card-top"><span className="metric-card-icon">▣</span><span>Company / Project</span></span>
-              <strong>{companyBookings}</strong>
-              <small>Corporate & project bookings</small>
-            </button>
-            <button
-              type="button"
-              className={`kpi-detail-summary-card metric-card accent-orange ${bookingCustomerTypeFilter === 'Individual / Personal' ? 'selected' : ''}`}
-              aria-pressed={bookingCustomerTypeFilter === 'Individual / Personal'}
-              onClick={() => setBookingCustomerTypeFilter(bookingCustomerTypeFilter === 'Individual / Personal' ? 'All' : 'Individual / Personal')}
-            >
-              <span className="metric-card-top"><span className="metric-card-icon">◉</span><span>Individual / Personal</span></span>
-              <strong>{individualBookings}</strong>
-              <small>Personal & self-use bookings</small>
-            </button>
-          </section>
+          <div className="booking-status-filters" role="group" aria-label="Filter bookings by status">
+            {bookingStatusOptions.map(({ status, label, count }) => (
+              <button
+                key={status}
+                type="button"
+                className="booking-status-filter"
+                aria-pressed={bookingRecordFilter === status}
+                onClick={() => setBookingRecordFilter(status)}
+              >
+                <span>{label}</span><strong>{count}</strong>
+              </button>
+            ))}
+          </div>
+
+          <details className="booking-advanced-filters">
+            <summary>More filters</summary>
+            <div className="booking-advanced-fields">
+              <RecordSelect value={bookingPlanFilter} onChange={setBookingPlanFilter} options={bookingPlans} label="Plan" allLabel="All plans" />
+              <RecordSelect value={bookingPriorityFilter} onChange={selectBookingPriority} options={bookingPriorities} label="Priority" allLabel="All priorities" />
+            </div>
+          </details>
 
           <div className="chart-wrap kpi-detail-table-wrap">
-            <table className="state-table kpi-detail-table">
+            <table className="state-table kpi-detail-table booking-record-table">
+              <colgroup>
+                <col style={{ width: 100 }} />
+                <col style={{ width: 150 }} />
+                <col style={{ width: 130 }} />
+                <col style={{ width: 150 }} />
+                <col style={{ width: 150 }} />
+                <col style={{ width: 145 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 155 }} />
+                <col style={{ width: 160 }} />
+                <col style={{ width: 110 }} />
+                <col style={{ width: 115 }} />
+                <col style={{ width: 205 }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Booking ID</th>
@@ -1454,7 +1514,6 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
               </tbody>
             </table>
           </div>
-          <p className="kpi-detail-source">Illustrative booking-level records for interface preview; customer, owner and operator IDs are sample identifiers.</p>
         </section>
       )}
 
@@ -1462,7 +1521,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         <section className="panel" aria-labelledby="active-vehicles-title">
           <div className="panel-header">
             <div>
-              <h3 id="active-vehicles-title">Fleet records sample</h3>
+              <h3 id="active-vehicles-title">Fleet records</h3>
               <span className="health-meta">Showing {filteredVehicles.length} of {activeVehicleRecords.length} vehicles · filter by status or category</span>
             </div>
             <div className="panel-header-tools">
@@ -1472,10 +1531,9 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
                 className="record-select-input record-search-input"
                 value={vehicleSearch}
                 onChange={(event) => setVehicleSearch(event.target.value)}
-                placeholder="Search vehicle ID, owner or operator"
-                aria-label="Search vehicles by ID"
+                placeholder="Search vehicle ID, owner, operator, city or zone"
+                aria-label="Search vehicles by ID, owner, operator, city or zone"
               />
-              <span className="chip active">Dummy data</span>
             </div>
           </div>
 
@@ -1488,7 +1546,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
             >
               <span className="metric-card-top"><span className="metric-card-icon">▤</span><span>Total vehicles</span></span>
               <strong>{activeVehicleRecords.length}</strong>
-              <small>All sample vehicles</small>
+              <small>All vehicles</small>
             </button>
             <button
               type="button"
@@ -1577,14 +1635,19 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
                         <small>{vehicle.operatorId}</small>
                       </span>
                     </td>
-                    <td>{vehicle.city}, {vehicle.state}</td>
+                    <td>
+                      <span className="booking-record-entity">
+                        <span>{vehicle.zone}</span>
+                        <small>{vehicle.city}, {vehicle.state}</small>
+                      </span>
+                    </td>
                     <td><span className={`vehicle-status ${vehicleStatusClass(vehicle.status)}`}>{vehicle.status}</span></td>
                     <td>
                       <span className="vehicle-utilization">
                         <span className="vehicle-utilization-track">
                           <span className="vehicle-utilization-fill" style={{ width: `${vehicle.utilization}%` }} />
                         </span>
-                        {vehicle.utilization}%
+                        <span className="vehicle-utilization-value">{vehicle.utilization}%</span>
                       </span>
                     </td>
                     <td>₹{vehicle.dailyRate.toLocaleString('en-IN')}</td>
@@ -1595,7 +1658,6 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
               </tbody>
             </table>
           </div>
-          <p className="kpi-detail-source">Illustrative fleet-level records for interface preview; owner and operator IDs are sample identifiers.</p>
         </section>
       )}
 
@@ -1603,7 +1665,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         <section className="panel" aria-labelledby="active-operators-title">
           <div className="panel-header">
             <div>
-              <h3 id="active-operators-title">Operator records sample</h3>
+              <h3 id="active-operators-title">Operator records </h3>
               <span className="health-meta">Showing {filteredOperators.length} of {activeOperatorRecords.length} operators · filter by status or skill</span>
             </div>
             <div className="panel-header-tools">
@@ -1616,7 +1678,6 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
                 placeholder="Search operator ID or owner"
                 aria-label="Search operators by ID"
               />
-              <span className="chip active">Dummy data</span>
             </div>
           </div>
 
@@ -1629,7 +1690,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
             >
               <span className="metric-card-top"><span className="metric-card-icon">▤</span><span>Total operators</span></span>
               <strong>{activeOperatorRecords.length}</strong>
-              <small>All sample operators</small>
+              <small>All operators</small>
             </button>
             <button
               type="button"
@@ -1724,7 +1785,6 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
               </tbody>
             </table>
           </div>
-          <p className="kpi-detail-source">Illustrative operator-level records for interface preview; operator and owner IDs are sample identifiers.</p>
         </section>
       )}
 
@@ -1732,7 +1792,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         <section className="panel" aria-labelledby="fleet-partners-title">
           <div className="panel-header">
             <div>
-              <h3 id="fleet-partners-title">Fleet partner records sample</h3>
+              <h3 id="fleet-partners-title">Fleet partner records </h3>
               <span className="health-meta">Showing {filteredPartners.length} of {fleetPartnerRecords.length} partners · filter by status or state</span>
             </div>
             <div className="panel-header-tools">
@@ -1745,7 +1805,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
                 placeholder="Search partner ID, name or contact"
                 aria-label="Search partners by ID"
               />
-              <span className="chip active">Dummy data</span>
+              
             </div>
           </div>
 
@@ -1758,7 +1818,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
             >
               <span className="metric-card-top"><span className="metric-card-icon">▤</span><span>Total partners</span></span>
               <strong>{fleetPartnerRecords.length}</strong>
-              <small>All sample accounts</small>
+              <small>All  accounts</small>
             </button>
             <button
               type="button"
@@ -1851,7 +1911,6 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
               </tbody>
             </table>
           </div>
-          <p className="kpi-detail-source">Illustrative fleet partner records for interface preview; partner and contact details are sample data.</p>
         </section>
       )}
 
@@ -1859,7 +1918,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         <section className="panel" aria-labelledby="active-cities-title">
           <div className="panel-header">
             <div>
-              <h3 id="active-cities-title">City records sample</h3>
+              <h3 id="active-cities-title">City records</h3>
               <span className="health-meta">Showing {filteredCities.length} of {activeCityRecords.length} cities · filter by status or state</span>
             </div>
             <div className="panel-header-tools">
@@ -1872,7 +1931,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
                 placeholder="Search city ID or name"
                 aria-label="Search cities by ID"
               />
-              <span className="chip active">Dummy data</span>
+              
             </div>
           </div>
 
@@ -1885,7 +1944,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
             >
               <span className="metric-card-top"><span className="metric-card-icon">▤</span><span>Total cities</span></span>
               <strong>{activeCityRecords.length}</strong>
-              <small>All sample cities</small>
+              <small>All cities</small>
             </button>
             <button
               type="button"
@@ -1978,7 +2037,6 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
               </tbody>
             </table>
           </div>
-          <p className="kpi-detail-source">Illustrative city-level records for interface preview; city and zone counts are sample data.</p>
         </section>
       )}
 
@@ -1986,7 +2044,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
         <section className="panel" aria-labelledby="active-zones-title">
           <div className="panel-header">
             <div>
-              <h3 id="active-zones-title">Zone records sample</h3>
+              <h3 id="active-zones-title">Zone records</h3>
               <span className="health-meta">Showing {filteredZones.length} of {activeZoneRecords.length} zones · filter by status or city</span>
             </div>
             <div className="panel-header-tools">
@@ -1999,7 +2057,6 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
                 placeholder="Search zone ID, name or manager"
                 aria-label="Search zones by ID"
               />
-              <span className="chip active">Dummy data</span>
             </div>
           </div>
 
@@ -2012,7 +2069,7 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
             >
               <span className="metric-card-top"><span className="metric-card-icon">▤</span><span>Total zones</span></span>
               <strong>{activeZoneRecords.length}</strong>
-              <small>All sample zones</small>
+              <small>All zones</small>
             </button>
             <button
               type="button"
@@ -2107,16 +2164,12 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
               </tbody>
             </table>
           </div>
-          <p className="kpi-detail-source">Illustrative zone-level records for interface preview; zone, manager and coverage figures are sample data.</p>
         </section>
       )}
 
       <section className="panel" aria-labelledby="kpi-period-breakdown">
         <div className="panel-header">
-          <div>
-            <h3 id="kpi-period-breakdown">{periodNoun}ly breakdown</h3>
-            <span className="health-meta">{periodNoun}-over-{periodNounLower} change is calculated from the sample values shown.</span>
-          </div>
+          <h3 id="kpi-period-breakdown">{periodNoun}ly breakdown</h3>
         </div>
         <div className="chart-wrap kpi-detail-table-wrap">
           <table className="state-table kpi-detail-table">
@@ -2145,16 +2198,11 @@ export default function KpiDetailPage({ metric, onBack, onOpenBookingLedger }: K
             </tbody>
           </table>
         </div>
-        <p className="kpi-detail-source">Illustrative dummy data for interface preview only; values are not live platform analytics.</p>
       </section>
 
       <section className="panel" aria-label={`${metric.label} ${periodNounLower}ly trend chart`}>
         <div className="panel-header">
-          <div>
-            <h3>{periodNoun}ly trend</h3>
-            <span className="health-meta">Each bar represents the value recorded for that {periodNounLower}.</span>
-          </div>
-          <span className="chip active">Sample data</span>
+          <h3>{periodNoun}ly trend</h3>
         </div>
         <div className="chart-wrap">
           <div className="kpi-detail-chart">

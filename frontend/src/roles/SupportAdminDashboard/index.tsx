@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { commandCenterStyles } from '../commandCenterStyles'
+import RoleHeaderMenus from '../RoleHeaderMenus'
 import {
   bookings,
   reportCards,
@@ -20,12 +21,34 @@ import UsersSection from './UsersSection'
 import RefundsSection from './RefundsSection'
 import EscalationsSection from './EscalationsSection'
 import ReportsSection from './ReportsSection'
+import NotificationsSection from './NotificationsSection'
+import AudienceSupportSection from './AudienceSupportSection'
+import PaymentSupportSection from './PaymentSupportSection'
+import LiveChatSection from './LiveChatSection'
 
 const sectionIds: SectionId[] = supportSections.map((section) => section.id)
 
 const sectionFromHash = (): SectionId => {
   if (typeof window === 'undefined') return 'overview'
   return sectionIds.find((id) => window.location.hash.startsWith(`#support-admin/${id}`)) ?? 'overview'
+}
+
+const ticketFromHash = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const match = window.location.hash.match(/^#support-admin\/(?:tickets\/|(?:customer-support|owner-support|operator-support)\/ticket\/)([^/]+)$/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+const userFromHash = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const match = window.location.hash.match(/^#support-admin\/users\/([^/]+)$/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+const bookingFromHash = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const match = window.location.hash.match(/^#support-admin\/bookings\/([^/]+)$/)
+  return match ? decodeURIComponent(match[1]) : null
 }
 
 type SearchResult = {
@@ -43,13 +66,21 @@ type SupportAdminDashboardProps = {
 export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboardProps) {
   const store = useSupportAdmin()
   const [activeSection, setActiveSection] = useState<SectionId>(sectionFromHash)
+  const [openedTicketId, setOpenedTicketId] = useState<string | null>(ticketFromHash)
+  const [openedUserId, setOpenedUserId] = useState<string | null>(userFromHash)
+  const [openedBookingId, setOpenedBookingId] = useState<string | null>(bookingFromHash)
   const [headerPanel, setHeaderPanel] = useState<'search' | 'notifications' | 'alerts' | 'period' | null>(null)
   const [headerQuery, setHeaderQuery] = useState('')
   const [period, setPeriod] = useState('This Month')
   const [notifications, setNotifications] = useState<SupportNotification[]>(supportNotifications)
 
   useEffect(() => {
-    const syncFromHash = () => setActiveSection(sectionFromHash())
+    const syncFromHash = () => {
+      setActiveSection(sectionFromHash())
+      setOpenedTicketId(ticketFromHash())
+      setOpenedUserId(userFromHash())
+      setOpenedBookingId(bookingFromHash())
+    }
     window.addEventListener('hashchange', syncFromHash)
     window.addEventListener('popstate', syncFromHash)
     return () => {
@@ -61,7 +92,46 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
   const navigateSection = (id: SectionId) => {
     window.history.pushState(null, '', `#support-admin/${id}`)
     setActiveSection(id)
+    setOpenedTicketId(null)
+    setOpenedUserId(null)
+    setOpenedBookingId(null)
     setHeaderPanel(null)
+  }
+
+  const openUser = (id: string) => {
+    window.history.pushState(null, '', `#support-admin/users/${encodeURIComponent(id)}`)
+    setActiveSection('users')
+    setOpenedUserId(id)
+    setOpenedTicketId(null)
+    setOpenedBookingId(null)
+    setHeaderPanel(null)
+  }
+
+  const openBooking = (id: string) => {
+    window.history.pushState(null, '', `#support-admin/bookings/${encodeURIComponent(id)}`)
+    setActiveSection('bookings')
+    setOpenedBookingId(id)
+    setOpenedTicketId(null)
+    setOpenedUserId(null)
+    setHeaderPanel(null)
+  }
+
+  const openTicket = (id: string, sourceSection: SectionId = 'tickets') => {
+    const ticketPath = sourceSection === 'tickets' ? `tickets/${encodeURIComponent(id)}` : `${sourceSection}/ticket/${encodeURIComponent(id)}`
+    window.history.pushState(null, '', `#support-admin/${ticketPath}`)
+    setActiveSection(sourceSection)
+    setOpenedTicketId(id)
+    setOpenedUserId(null)
+    setOpenedBookingId(null)
+    setHeaderPanel(null)
+  }
+
+  const returnToTicketQueue = (sourceSection: SectionId = 'tickets') => {
+    window.history.pushState(null, '', `#support-admin/${sourceSection}`)
+    setActiveSection(sourceSection)
+    setOpenedTicketId(null)
+    setOpenedUserId(null)
+    setOpenedBookingId(null)
   }
 
   const unreadNotifications = notifications.filter((item) => !item.read).length
@@ -73,8 +143,11 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
 
   const navBadges: Partial<Record<SectionId, number>> = {
     tickets: queueCount,
+    'live-chat': store.conversations.reduce((total, item) => total + item.unread, 0),
+    'payment-support': store.paymentIssues.filter((item) => item.status === 'Open' || item.status === 'Investigating').length,
     refunds: refundQueue,
     escalations: openEscalations,
+    notifications: unreadNotifications,
   }
 
   const searchResults = useMemo<SearchResult[]>(() => {
@@ -157,6 +230,25 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
     store.showToast(`${title} exported as ${format}`)
   }
 
+  const renderAudienceSupport = (section: 'customer-support' | 'owner-support' | 'operator-support') => (
+    <AudienceSupportSection
+      section={section}
+      tickets={store.tickets}
+      savedReplies={store.savedReplies}
+      openedTicketId={openedTicketId}
+      onOpenTicket={(id) => openTicket(id, section)}
+      onBackToQueue={() => returnToTicketQueue(section)}
+      onAssign={store.assignTicket}
+      onPriority={store.setPriority}
+      onCategory={store.setCategory}
+      onReply={store.replyTicket}
+      onSavedReply={store.applySavedReply}
+      onClose={store.closeTicket}
+      onReopen={store.reopenTicket}
+      onLinkBooking={store.linkTicketBooking}
+    />
+  )
+
   return (
     <section className="stateadmin-role-dashboard">
       <style>{commandCenterStyles}</style>
@@ -213,13 +305,14 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
 
       <div className="sa-main">
         <header className="dashboard-header">
-          <div className="header-copy">
-            <p className="header-kicker">
-              {supportProfile.state} · {supportProfile.city} command
-            </p>
-            <h1 className="header-title">{sectionMeta.title}</h1>
-            <div className="header-breadcrumb">
-              Overview / {supportProfile.state} / {supportProfile.city} / {sectionMeta.crumb}
+          <div className="role-header-leading">
+            <div className="role-header-brand" aria-label="EquipHub">
+              <span className="role-header-brand-mark" aria-hidden="true">E</span>
+              <span>EquipHub</span>
+            </div>
+            <div className="header-copy">
+              <h1 className="header-title">{sectionMeta.title}</h1>
+              <div className="header-breadcrumb">{supportProfile.state} · {supportProfile.city}</div>
             </div>
           </div>
 
@@ -270,7 +363,7 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'notifications' ? 'is-open' : ''}`}
@@ -311,11 +404,20 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
                         </button>
                       ))}
                     </div>
+                    <div className="header-popover-head">
+                      <button
+                        type="button"
+                        className="header-popover-action"
+                        onClick={() => navigateSection('notifications')}
+                      >
+                        View all notifications
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'alerts' ? 'is-open' : ''}`}
@@ -360,7 +462,7 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'period' ? 'is-open' : ''}`}
@@ -392,10 +494,21 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+              <div className="legacy-profile-control" style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
                 <div className="header-avatar">{supportProfile.initials}</div>
                 <button type="button" className="org-button" onClick={onSignOut}>Logout</button>
               </div>
+              <RoleHeaderMenus
+                notifications={notifications}
+                alerts={supportAlerts}
+                initials={supportProfile.initials}
+                onNotificationClick={(item) => { markNotificationRead(item.id); openFeedTarget(item.target) }}
+                onAlertClick={(item) => openFeedTarget(item.target)}
+                onMarkAllRead={markAllNotificationsRead}
+                onSignOut={onSignOut}
+                onAlertsFooter={() => openFeedTarget('tickets')}
+                alertsFooterLabel="Open ticket desk"
+              />
             </div>
           </div>
         </header>
@@ -413,6 +526,9 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
             <TicketsSection
               tickets={store.tickets}
               savedReplies={store.savedReplies}
+              openedTicketId={openedTicketId}
+              onOpenTicket={openTicket}
+              onBackToQueue={returnToTicketQueue}
               onAssign={store.assignTicket}
               onPriority={store.setPriority}
               onCategory={store.setCategory}
@@ -424,16 +540,47 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
             />
           )}
 
+          {activeSection === 'customer-support' && renderAudienceSupport('customer-support')}
+          {activeSection === 'owner-support' && renderAudienceSupport('owner-support')}
+          {activeSection === 'operator-support' && renderAudienceSupport('operator-support')}
+          {activeSection === 'live-chat' && (
+            <LiveChatSection
+              conversations={store.conversations}
+              onAssign={store.assignConversation}
+              onStatusChange={store.setConversationStatus}
+              onMarkRead={store.markConversationRead}
+              onSend={store.sendChatMessage}
+            />
+          )}
+
           {activeSection === 'bookings' && (
             <BookingAssistSection
               bookings={bookings}
               tickets={store.tickets}
+              selectedBookingId={openedBookingId}
+              onOpenBooking={openBooking}
+              onBackToBookings={() => navigateSection('bookings')}
               onCreateTicket={store.createTicketFromBooking}
               onLinkTicket={store.linkTicketBooking}
             />
           )}
 
-          {activeSection === 'users' && <UsersSection users={userAccounts} tickets={store.tickets} />}
+          {activeSection === 'users' && (
+            <UsersSection
+              users={userAccounts}
+              tickets={store.tickets}
+              selectedUserId={openedUserId}
+              onOpenUser={openUser}
+              onBackToUsers={() => navigateSection('users')}
+            />
+          )}
+
+          {activeSection === 'payment-support' && (
+            <PaymentSupportSection
+              issues={store.paymentIssues}
+              onStatusChange={store.updatePaymentIssueStatus}
+            />
+          )}
 
           {activeSection === 'refunds' && (
             <RefundsSection
@@ -453,10 +600,19 @@ export default function SupportAdminDashboard({ onSignOut }: SupportAdminDashboa
               onCreate={store.createEscalation}
               onAcknowledge={store.acknowledgeEscalation}
               onResolve={store.resolveEscalation}
+              onUpdate={store.updateEscalationDetails}
             />
           )}
 
           {activeSection === 'reports' && <ReportsSection audit={store.audit} onExport={handleExport} onNavigate={navigateSection} />}
+
+          {activeSection === 'notifications' && (
+            <NotificationsSection
+              notifications={notifications}
+              setNotifications={setNotifications}
+              onNavigate={navigateSection}
+            />
+          )}
         </div>
       </div>
     </section>

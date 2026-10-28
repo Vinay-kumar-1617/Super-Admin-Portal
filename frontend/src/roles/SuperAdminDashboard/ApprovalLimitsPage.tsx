@@ -5,6 +5,7 @@ type ApprovalLimitsPageProps = {
   staff: StaffAccount[]
   setStaff: React.Dispatch<React.SetStateAction<StaffAccount[]>>
   onBack?: () => void
+  embedded?: boolean
 }
 
 const defaultLimitForRole: Record<string, number> = {
@@ -20,7 +21,7 @@ const defaultLimitForRole: Record<string, number> = {
 
 const formatLimit = (value: number) => `₹${Math.max(0, Math.round(value || 0)).toLocaleString('en-IN')}`
 
-export default function ApprovalLimitsPage({ staff, setStaff, onBack }: ApprovalLimitsPageProps) {
+export default function ApprovalLimitsPage({ staff, setStaff, onBack, embedded = false }: ApprovalLimitsPageProps) {
   const [newLimit, setNewLimit] = useState(50000)
   const [targetRole, setTargetRole] = useState<string>(roleOptions[3])
   const [targetScope, setTargetScope] = useState<string>(scopeOptions[0])
@@ -78,7 +79,7 @@ export default function ApprovalLimitsPage({ staff, setStaff, onBack }: Approval
         .access-admin-metric strong { color: #182230; font-size: 1.35rem; }
         .access-admin-panel { min-width: 0; overflow: hidden; }
         .access-admin-panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 16px 18px; border-bottom: 1px solid rgba(15,23,42,0.07); }
-        .access-admin-panel-header h3 { margin: 0 0 5px; font-size: 1rem; }
+        .access-admin-panel-header h3 { margin: 0; font-size: 1rem; }
         .access-admin-panel-header p { margin: 0; color: var(--muted); font-size: 0.78rem; }
         .access-admin-panel-actions { display: inline-flex; align-items: center; gap: 8px; }
         .access-admin-badge { display: inline-flex; padding: 4px 10px; border-radius: 999px; background: rgba(234,88,12,0.1); color: #c2410c; font-size: 0.68rem; font-weight: 800; }
@@ -112,21 +113,19 @@ export default function ApprovalLimitsPage({ staff, setStaff, onBack }: Approval
         .header-action { border: 1px solid rgba(15,23,42,0.12); border-radius: 10px; padding: 8px 10px; background: #fff; color: #182230; font: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
       `}</style>
 
-      <header className="access-admin-header">
-        <div>
-          <span className="access-admin-kicker">Governance</span>
-          <h2>Approval limits</h2>
-          <p>
-            Set the maximum booking or payout value each account can approve without a second signature. Bulk changes apply
-            instantly to active accounts; per-account overrides take effect immediately.
-          </p>
-        </div>
-        {onBack ? (
-          <button type="button" className="header-action" onClick={onBack}>
-            Back to dashboard
-          </button>
-        ) : null}
-      </header>
+      {!embedded && (
+        <header className="access-admin-header">
+          <div>
+            <span className="access-admin-kicker">Governance</span>
+            <h2>Approval limits</h2>
+          </div>
+          {onBack ? (
+            <button type="button" className="header-action" onClick={onBack}>
+              Back to dashboard
+            </button>
+          ) : null}
+        </header>
+      )}
 
       <div className="access-admin-summary">
         <div className="access-admin-metric">
@@ -151,7 +150,6 @@ export default function ApprovalLimitsPage({ staff, setStaff, onBack }: Approval
         <div className="access-admin-panel-header">
           <div>
             <h3>Bulk update</h3>
-            <p>Apply a new ceiling to every active account that matches a role and scope.</p>
           </div>
           <span className="access-admin-badge">
             {bulkMatches} {bulkMatches === 1 ? 'match' : 'matches'}
@@ -198,10 +196,7 @@ export default function ApprovalLimitsPage({ staff, setStaff, onBack }: Approval
 
       <section className="access-admin-panel" aria-label="Per-account approval limits">
         <div className="access-admin-panel-header">
-          <div>
-            <h3>Per-account limits</h3>
-            <p>Fine-tune individual ceilings or reset everyone to their role default.</p>
-          </div>
+          <h3>Per-account limits</h3>
           <div className="access-admin-panel-actions">
             <button type="button" className="access-admin-button ghost" onClick={resetAllToDefaults}>
               Reset all to defaults

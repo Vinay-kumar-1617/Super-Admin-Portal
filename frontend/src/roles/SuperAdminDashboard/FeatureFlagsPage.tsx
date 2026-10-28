@@ -17,6 +17,38 @@ type FlagDraft = {
 const todayIso = new Date().toISOString().slice(0, 10)
 
 const featureFlagsPageStyles = `
+  .feature-flags-header {
+    align-items: center;
+  }
+
+  .feature-flags-header .states-breadcrumb button { color: var(--brand-orange); }
+  .feature-flags-header .states-breadcrumb button:hover { color: #c94310; }
+  .feature-flags-header .btn-secondary { color: var(--brand-orange-deep); }
+
+  .ff-table {
+    table-layout: fixed;
+    min-width: 1120px;
+  }
+
+  .ff-table th:nth-child(5) {
+    text-align: center;
+  }
+
+  .ff-table th:nth-child(1) { width: 32%; }
+  .ff-table th:nth-child(2) { width: 14%; }
+  .ff-table th:nth-child(3) { width: 17%; }
+  .ff-table th:nth-child(4) { width: 22%; }
+  .ff-table th:nth-child(5) { width: 15%; }
+
+  .ff-table .table-actions-cell {
+    display: table-cell;
+    text-align: center;
+  }
+
+  .ff-save-btn {
+    min-width: 68px;
+  }
+
   .ff-toolbar {
     display: flex;
     align-items: center;
@@ -268,7 +300,7 @@ export default function FeatureFlagsPage({ flags, setFlags, onBack }: FeatureFla
       <style>{statesPageStyles}</style>
       <style>{featureFlagsPageStyles}</style>
 
-      <header className="states-header">
+      <header className="states-header feature-flags-header">
         <div className="states-header-copy">
           <div className="states-breadcrumb">
             <button type="button" onClick={onBack}>Dashboard</button>
@@ -278,10 +310,6 @@ export default function FeatureFlagsPage({ flags, setFlags, onBack }: FeatureFla
             <strong>Feature Flags</strong>
           </div>
           <h2>Global Feature Flags</h2>
-          <p>
-            Turn platform capabilities on or off across the Heavy Machinery Rental App. Each flag carries its own
-            scope and effective date, and changes only reach production when you save them.
-          </p>
         </div>
         <div className="states-header-actions">
           <button type="button" className="btn-secondary" onClick={onBack}>
@@ -354,14 +382,13 @@ export default function FeatureFlagsPage({ flags, setFlags, onBack }: FeatureFla
       ) : (
         <section className="states-table-card" aria-label="Global feature flags list">
           <div className="states-table-wrap">
-            <table className="states-table">
+            <table className="states-table ff-table">
               <thead>
                 <tr>
                   <th>Flag</th>
                   <th>Status</th>
                   <th>Scope</th>
                   <th>Effective date</th>
-                  <th>Changes</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -383,13 +410,13 @@ export default function FeatureFlagsPage({ flags, setFlags, onBack }: FeatureFla
                             <input
                               type="checkbox"
                               checked={draft.enabled}
-                              aria-label={`${flag.name} ${draft.enabled ? 'ON' : 'OFF'}`}
+                              aria-label={`${flag.name} ${draft.enabled ? 'Active' : 'Inactive'}`}
                               onChange={(event) => updateDraft(flag, { enabled: event.target.checked })}
                             />
                             <span className="ff-switch-track" />
                           </label>
                           <span className={`ff-status-text ${draft.enabled ? 'on' : 'off'}`}>
-                            {draft.enabled ? 'ON' : 'OFF'}
+                            {draft.enabled ? 'Active' : 'Inactive'}
                           </span>
                         </div>
                       </td>
@@ -416,11 +443,6 @@ export default function FeatureFlagsPage({ flags, setFlags, onBack }: FeatureFla
                           onChange={(event) => updateDraft(flag, { effectiveDate: event.target.value })}
                         />
                         <div className="ff-date-label">{formatFlagDate(draft.effectiveDate)}</div>
-                      </td>
-                      <td>
-                        <span className={`status-pill ${dirty ? 'pending' : 'active'}`}>
-                          {dirty ? 'Unsaved' : 'Saved'}
-                        </span>
                       </td>
                       <td className="table-actions-cell">
                         <button

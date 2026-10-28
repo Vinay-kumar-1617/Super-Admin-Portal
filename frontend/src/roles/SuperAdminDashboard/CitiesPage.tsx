@@ -1,11 +1,16 @@
 import { useState, useMemo, type Dispatch, type FormEvent, type SetStateAction } from 'react'
 import { statesPageStyles } from './pageStyles'
 import type { CityItem } from './citiesData'
+import { initialZonesData, type ZoneItem } from './zonesData'
+import CityMetricPage, { type CityMetricView } from './CityMetricPage'
 import type { BookingStatus, StateActivity, StateBooking } from './statesData'
 import { initialStatesData } from './statesData'
 
+type CityMetric = 'districts' | 'active-zones' | 'users' | 'officers'
+
 type CitiesPageProps = {
   cities: CityItem[]
+  zones?: ZoneItem[]
   setCities: Dispatch<SetStateAction<CityItem[]>>
   onBack?: () => void
   statusFilter: 'all' | 'active' | 'inactive'
@@ -17,6 +22,7 @@ type CitiesPageProps = {
 
 export default function CitiesPage({
   cities,
+  zones: zonesProp,
   setCities,
   onBack,
   statusFilter,
@@ -29,6 +35,8 @@ export default function CitiesPage({
   const [stateFilter, setStateFilter] = useState('all')
   const [cityFilter, setCityFilter] = useState('all')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [selectedMetric, setSelectedMetric] = useState<CityMetric | null>(null)
+  const [metricView, setMetricView] = useState<CityMetricView | null>(null)
 
   // Selected City for viewing details
   const [viewCity, setViewCity] = useState<CityItem | null>(null)
@@ -138,6 +146,31 @@ export default function CitiesPage({
   const totalZonesCount = useMemo(() => cities.reduce((sum, c) => sum + c.totalZones, 0), [cities])
   const totalDistrictsCount = useMemo(() => cities.reduce((sum, c) => sum + c.totalDistricts, 0), [cities])
   const totalUsersCount = useMemo(() => cities.reduce((sum, c) => sum + c.totalUsers, 0), [cities])
+  const totalOfficersCount = useMemo(
+    () => cities.reduce((sum, c) => sum + (c.userBreakdown?.fieldOfficers ?? 0), 0),
+    [cities],
+  )
+
+  const selectedMetricRows = useMemo(() => {
+    if (!selectedMetric) return []
+
+    const allZones = zonesProp ?? initialZonesData
+
+    return cities
+      .map((city) => ({
+        city,
+        value:
+          selectedMetric === 'districts'
+            ? city.totalDistricts
+            : selectedMetric === 'active-zones'
+              ? allZones.filter((z) => (z.cityId === city.id || z.cityName?.toLowerCase() === city.name.toLowerCase()) && z.status === 'Active').length || city.totalZones
+              : selectedMetric === 'users'
+                ? city.totalUsers
+                : city.userBreakdown?.fieldOfficers ?? 0,
+      }))
+      .filter((row) => row.value > 0)
+      .sort((a, b) => b.value - a.value || a.city.name.localeCompare(b.city.name))
+  }, [selectedMetric, cities, zonesProp])
 
   // Zone options for the selected city
   const cityZoneOptions = useMemo(() => {
@@ -199,6 +232,7 @@ export default function CitiesPage({
   // Open city details and reset sub-filters
   const handleOpenCityDetails = (ct: CityItem) => {
     setViewCity(ct)
+    setMetricView(null)
     setBookingSearch('')
     setBookingDistrictFilter('all')
     setBookingZoneFilter('all')
@@ -206,6 +240,12 @@ export default function CitiesPage({
     setBookingDateFilter('')
     setSelectedBooking(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const exitCityDetails = () => {
+    setMetricView(null)
+    setViewCity(null)
+    setSelectedBooking(null)
   }
 
   // Toggle status handler
@@ -451,7 +491,7 @@ export default function CitiesPage({
         .cities-clear-btn {
           border: 0;
           background: transparent;
-          color: #ef4a12;
+          color: var(--brand-orange);
           font-family: inherit;
           font-size: 0.78rem;
           font-weight: 800;
@@ -462,35 +502,97 @@ export default function CitiesPage({
         .cities-clear-btn:hover {
           text-decoration: underline;
         }
+
+        .states-header {
+          align-items: center;
+        }
+
+        .states-header-meta {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-top: 3px;
+        }
+
+        .states-created-date {
+          font-size: 0.74rem;
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        .states-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          flex-shrink: 0;
+        }
+
+        .states-header-actions .btn-secondary,
+        .states-header-actions .btn-primary {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          height: 38px;
+          padding: 8px 16px;
+          font-size: 0.84rem;
+          font-weight: 700;
+          box-sizing: border-box;
+          white-space: nowrap;
+        }
+
+        .states-breadcrumb button:hover {
+          text-decoration: underline;
+        }
+
+        .state-metric-breakdown {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .state-metric-breakdown th,
+        .state-metric-breakdown td {
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+          text-align: left;
+        }
+
+        .state-metric-breakdown th {
+          color: #64748b;
+          font-size: 0.7rem;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+
+        .state-metric-breakdown td:last-child,
+        .state-metric-breakdown th:last-child {
+          text-align: right;
+        }
       `}</style>
 
       {/* Breadcrumb & Header */}
-      <header className="states-header">
-        <div className="states-header-copy">
-          <div className="states-breadcrumb">
-            <button type="button" onClick={onBack}>Dashboard</button>
-            <span>/</span>
-            <span>Geography</span>
-            <span>/</span>
-            <strong>Cities Management</strong>
+      {!viewCity && (
+        <header className="states-header">
+          <div className="states-header-copy">
+            <div className="states-breadcrumb">
+              <button type="button" onClick={onBack}>Dashboard</button>
+            </div>
+            <h2>Cities & Jurisdictions</h2>
           </div>
-          <h2>Cities & Jurisdictions</h2>
-          <p>
-            Manage city hubs, assign dedicated City Admins, monitor zones, districts, officers, and operational activity.
-          </p>
-        </div>
 
-        <div className="states-header-actions">
-          {onBack && (
-            <button type="button" className="btn-secondary" onClick={onBack}>
-              ← Back to Overview
+          <div className="states-header-actions">
+            {onBack && (
+              <button type="button" className="btn-secondary" onClick={onBack}>
+                ← Back to Overview
+              </button>
+            )}
+            <button type="button" className="btn-primary geo-add-action" onClick={() => setIsAddModalOpen(true)}>
+              <span>+</span> Add City
             </button>
-          )}
-          <button type="button" className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
-            <span>+</span> Add City
-          </button>
-        </div>
-      </header>
+          </div>
+        </header>
+      )}
 
       {!viewCity && (
         <>
@@ -498,13 +600,14 @@ export default function CitiesPage({
           <section className="states-stats-grid" aria-label="Cities summary statistics">
             <button
               type="button"
-              className={`states-stat-card interactive ${statusFilter === 'all' ? 'selected' : ''}`}
-              aria-pressed={statusFilter === 'all'}
+              className={`states-stat-card interactive ${statusFilter === 'all' && !selectedMetric ? 'selected' : ''}`}
+              aria-pressed={statusFilter === 'all' && !selectedMetric}
               onClick={() => {
                 onStatusFilterChange('all')
                 setStateFilter('all')
                 setCityFilter('all')
                 setSearchQuery('')
+                setSelectedMetric(null)
               }}
             >
               <div className="states-stat-info">
@@ -516,13 +619,14 @@ export default function CitiesPage({
 
             <button
               type="button"
-              className={`states-stat-card interactive ${statusFilter === 'active' ? 'selected' : ''}`}
-              aria-pressed={statusFilter === 'active'}
+              className={`states-stat-card interactive ${statusFilter === 'active' && !selectedMetric ? 'selected' : ''}`}
+              aria-pressed={statusFilter === 'active' && !selectedMetric}
               onClick={() => {
                 onStatusFilterChange('active')
                 setStateFilter('all')
                 setCityFilter('all')
                 setSearchQuery('')
+                setSelectedMetric(null)
               }}
             >
               <div className="states-stat-info">
@@ -534,13 +638,14 @@ export default function CitiesPage({
 
             <button
               type="button"
-              className={`states-stat-card interactive ${statusFilter === 'inactive' ? 'selected' : ''}`}
-              aria-pressed={statusFilter === 'inactive'}
+              className={`states-stat-card interactive ${statusFilter === 'inactive' && !selectedMetric ? 'selected' : ''}`}
+              aria-pressed={statusFilter === 'inactive' && !selectedMetric}
               onClick={() => {
                 onStatusFilterChange('inactive')
                 setStateFilter('all')
                 setCityFilter('all')
                 setSearchQuery('')
+                setSelectedMetric(null)
               }}
             >
               <div className="states-stat-info">
@@ -550,29 +655,57 @@ export default function CitiesPage({
               <span className="states-stat-badge orange">Paused</span>
             </button>
 
-            <div className="states-stat-card">
+            <button
+              type="button"
+              className={`states-stat-card interactive ${selectedMetric === 'districts' ? 'selected' : ''}`}
+              aria-pressed={selectedMetric === 'districts'}
+              onClick={() => setSelectedMetric('districts')}
+            >
               <div className="states-stat-info">
                 <span className="states-stat-label">Total Districts</span>
                 <span className="states-stat-value">{totalDistrictsCount}</span>
               </div>
               <span className="states-stat-badge blue">Coverage</span>
-            </div>
+            </button>
 
-            <div className="states-stat-card">
+            <button
+              type="button"
+              className={`states-stat-card interactive ${selectedMetric === 'active-zones' ? 'selected' : ''}`}
+              aria-pressed={selectedMetric === 'active-zones'}
+              onClick={() => setSelectedMetric('active-zones')}
+            >
               <div className="states-stat-info">
                 <span className="states-stat-label">Active Zones</span>
                 <span className="states-stat-value">{totalZonesCount}</span>
               </div>
               <span className="states-stat-badge blue">Zonal Coverage</span>
-            </div>
+            </button>
 
-            <div className="states-stat-card">
+            <button
+              type="button"
+              className={`states-stat-card interactive ${selectedMetric === 'users' ? 'selected' : ''}`}
+              aria-pressed={selectedMetric === 'users'}
+              onClick={() => setSelectedMetric('users')}
+            >
               <div className="states-stat-info">
-                <span className="states-stat-label">Users & Officers</span>
+                <span className="states-stat-label">Total Users</span>
                 <span className="states-stat-value">{totalUsersCount.toLocaleString()}</span>
               </div>
-              <span className="states-stat-badge orange">Staff & Fleet</span>
-            </div>
+              <span className="states-stat-badge orange">All users</span>
+            </button>
+
+            <button
+              type="button"
+              className={`states-stat-card interactive ${selectedMetric === 'officers' ? 'selected' : ''}`}
+              aria-pressed={selectedMetric === 'officers'}
+              onClick={() => setSelectedMetric('officers')}
+            >
+              <div className="states-stat-info">
+                <span className="states-stat-label">Officers</span>
+                <span className="states-stat-value">{totalOfficersCount.toLocaleString()}</span>
+              </div>
+              <span className="states-stat-badge orange">Field officers</span>
+            </button>
           </section>
 
           {/* Search and Filters Toolbar */}
@@ -755,36 +888,39 @@ export default function CitiesPage({
                           <div className="table-actions-cell">
                             <button
                               type="button"
-                              className="action-btn view"
+                              className="action-btn view icon-action"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleOpenCityDetails(ct)
                               }}
                               aria-label={`View details for ${ct.name}`}
+                              title="View city"
                             >
-                              View City
+                              👁️
                             </button>
                             <button
                               type="button"
-                              className="action-btn edit"
+                              className="action-btn edit icon-action"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 openEditModal(ct)
                               }}
                               aria-label={`Edit ${ct.name}`}
+                              title="Edit city"
                             >
-                              Edit
+                              ✏️
                             </button>
                             <button
                               type="button"
-                              className={`action-btn ${ct.status === 'Active' ? 'toggle-deactivate' : 'toggle-activate'}`}
+                              className={`action-btn icon-action ${ct.status === 'Active' ? 'toggle-deactivate' : 'toggle-activate'}`}
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleToggleStatus(ct.id)
                               }}
                               aria-label={`${ct.status === 'Active' ? 'Deactivate' : 'Activate'} ${ct.name}`}
+                              title={ct.status === 'Active' ? 'Deactivate city' : 'Activate city'}
                             >
-                              {ct.status === 'Active' ? 'Deactivate' : 'Activate'}
+                              {ct.status === 'Active' ? '🚫' : '✅'}
                             </button>
                           </div>
                         </td>
@@ -826,23 +962,33 @@ export default function CitiesPage({
         </>
       )}
 
+      {/* CITY METRIC PAGE (OPENED FROM THE CITY KPI CARDS) */}
+      {viewCity && metricView && (
+        <CityMetricPage
+          city={viewCity}
+          view={metricView}
+          zones={zonesProp ?? initialZonesData}
+          onChangeView={setMetricView}
+          onBack={() => setMetricView(null)}
+          onExitCity={exitCityDetails}
+          onViewBooking={setSelectedBooking}
+        />
+      )}
+
       {/* CITY DETAILS PAGE (DYNAMICALLY DRIVEN BY SELECTED CITY) */}
-      {viewCity && (
-        <section
-          style={{ display: 'grid', gap: 16, marginTop: 16 }}
-          aria-labelledby="view-city-title"
-        >
-          <div className="states-header">
+      {viewCity && !metricView && (
+        <>
+          <header className="states-header" aria-labelledby="view-city-title">
             <div className="states-header-copy">
               <div className="states-breadcrumb">
-                <button type="button" onClick={() => setViewCity(null)}>
+                <button type="button" onClick={exitCityDetails}>
                   Cities
                 </button>
                 <span>›</span>
                 <span>{viewCity.name}</span>
               </div>
               <h2 id="view-city-title">{viewCity.name} — City Overview</h2>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3, flexWrap: 'wrap' }}>
+              <div className="states-header-meta">
                 <span className="state-code-badge">{viewCity.code}</span>
                 <span className="state-code-badge" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
                   {viewCity.stateName}
@@ -851,7 +997,7 @@ export default function CitiesPage({
                   <span className="status-dot" />
                   {viewCity.status}
                 </span>
-                <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                <span className="states-created-date">
                   Created: {viewCity.createdDate}
                 </span>
               </div>
@@ -862,7 +1008,8 @@ export default function CitiesPage({
                 className="btn-secondary"
                 onClick={() => handleToggleStatus(viewCity.id)}
               >
-                {viewCity.status === 'Active' ? 'Deactivate City' : 'Activate City'}
+                <span>{viewCity.status === 'Active' ? '🚫' : '✅'}</span>
+                <span>{viewCity.status === 'Active' ? 'Deactivate City' : 'Activate City'}</span>
               </button>
               <button
                 type="button"
@@ -872,15 +1019,20 @@ export default function CitiesPage({
                   openEditModal(target)
                 }}
               >
-                Edit City
+                <span>✏️</span>
+                <span>Edit City</span>
               </button>
-              <button type="button" className="btn-primary" onClick={() => setViewCity(null)}>
-                Back to Cities
+              <button type="button" className="btn-primary" onClick={exitCityDetails}>
+                <span>←</span>
+                <span>Back to Cities</span>
               </button>
             </div>
-          </div>
+          </header>
 
-          <div style={{ display: 'grid', gap: 16 }}>
+          <section
+            style={{ display: 'grid', gap: 16 }}
+            aria-labelledby="view-city-title"
+          >
             {/* 1. CITY BOOKINGS & DISTRICT METRICS SUMMARY */}
             <div className="view-section" style={{ background: '#fff' }}>
               <h4 className="view-section-title">
@@ -889,54 +1041,94 @@ export default function CitiesPage({
               </h4>
 
               <div className="state-bookings-kpi-grid">
-                <div className="state-kpi-tile primary">
+                <button
+                  type="button"
+                  className="state-kpi-tile primary interactive"
+                  onClick={() => setMetricView('bookings')}
+                  title={`Open all bookings for ${viewCity.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewCity.bookingSummary?.total.toLocaleString() ?? '0'}
                   </span>
                   <span className="state-kpi-tile-label">Total Bookings</span>
-                </div>
-                <div className="state-kpi-tile amber">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile amber interactive"
+                  onClick={() => setMetricView('pending')}
+                  title={`Open pending bookings for ${viewCity.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewCity.bookingSummary?.pending.toLocaleString() ?? '0'}
                   </span>
                   <span className="state-kpi-tile-label">Pending</span>
-                </div>
-                <div className="state-kpi-tile blue">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile blue interactive"
+                  onClick={() => setMetricView('confirmed')}
+                  title={`Open confirmed bookings for ${viewCity.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewCity.bookingSummary?.confirmed.toLocaleString() ?? '0'}
                   </span>
                   <span className="state-kpi-tile-label">Confirmed</span>
-                </div>
-                <div className="state-kpi-tile green">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile green interactive"
+                  onClick={() => setMetricView('completed')}
+                  title={`Open completed bookings for ${viewCity.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewCity.bookingSummary?.completed.toLocaleString() ?? '0'}
                   </span>
                   <span className="state-kpi-tile-label">Completed</span>
-                </div>
-                <div className="state-kpi-tile red">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile red interactive"
+                  onClick={() => setMetricView('cancelled')}
+                  title={`Open cancelled bookings for ${viewCity.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewCity.bookingSummary?.cancelled.toLocaleString() ?? '0'}
                   </span>
                   <span className="state-kpi-tile-label">Cancelled</span>
-                </div>
-                <div className="state-kpi-tile">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile interactive"
+                  onClick={() => setMetricView('users')}
+                  title={`Open user distribution for ${viewCity.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewCity.totalUsers.toLocaleString()}
                   </span>
                   <span className="state-kpi-tile-label">Total Users</span>
-                </div>
-                <div className="state-kpi-tile">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile interactive"
+                  onClick={() => setMetricView('districts')}
+                  title={`Open district coverage for ${viewCity.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewCity.totalDistricts}
                   </span>
                   <span className="state-kpi-tile-label">Districts</span>
-                </div>
-                <div className="state-kpi-tile">
+                </button>
+                <button
+                  type="button"
+                  className="state-kpi-tile interactive"
+                  onClick={() => setMetricView('zones')}
+                  title={`Open zone breakdown for ${viewCity.name}`}
+                >
                   <span className="state-kpi-tile-value">
                     {viewCity.totalZones}
                   </span>
                   <span className="state-kpi-tile-label">Zones</span>
-                </div>
+                </button>
               </div>
             </div>
 
@@ -1175,8 +1367,94 @@ export default function CitiesPage({
                 </table>
               </div>
             </div>
+          </section>
+        </>
+      )}
+
+      {/* METRIC BREAKDOWN MODAL */}
+      {selectedMetric && (
+        <div
+          className="modal-overlay"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setSelectedMetric(null)
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="city-metric-title"
+        >
+          <div className="modal-card">
+            <header className="modal-header">
+              <div className="modal-header-info">
+                <div>
+                  <h3 id="city-metric-title">
+                    {{
+                      districts: 'Districts by city',
+                      'active-zones': 'Active zones by city',
+                      users: 'Users by city',
+                      officers: 'Field officers by city',
+                    }[selectedMetric]}
+                  </h3>
+                  <span style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                    Total: {{
+                      districts: totalDistrictsCount,
+                      'active-zones': totalZonesCount,
+                      users: totalUsersCount,
+                      officers: totalOfficersCount,
+                    }[selectedMetric].toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setSelectedMetric(null)}
+                aria-label="Close metric breakdown"
+              >
+                ×
+              </button>
+            </header>
+            <div className="modal-body" style={{ gap: 0, padding: 0 }}>
+              <div className="states-table-wrap">
+                <table className="state-metric-breakdown">
+                  <thead>
+                    <tr>
+                      <th>City</th>
+                      <th>State</th>
+                      <th>{{
+                        districts: 'Districts',
+                        'active-zones': 'Active zones',
+                        users: 'Users',
+                        officers: 'Field officers',
+                      }[selectedMetric]}</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedMetricRows.map(({ city, value }) => (
+                      <tr key={city.id}>
+                        <td><strong>{city.name}</strong> <span style={{ color: '#64748b' }}>({city.code})</span></td>
+                        <td><span className="state-code-badge">{city.stateName}</span></td>
+                        <td>{value.toLocaleString()}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="action-btn view"
+                            onClick={() => {
+                              handleOpenCityDetails(city)
+                              setSelectedMetric(null)
+                            }}
+                          >
+                            View city
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </section>
+        </div>
       )}
 
       {/* VIEW BOOKING DETAILS MODAL */}
@@ -1684,7 +1962,7 @@ export default function CitiesPage({
                 <button type="button" className="btn-secondary" onClick={() => setIsAddModalOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary">
+                <button type="submit" className="btn-primary geo-add-action">
                   Add City
                 </button>
               </footer>

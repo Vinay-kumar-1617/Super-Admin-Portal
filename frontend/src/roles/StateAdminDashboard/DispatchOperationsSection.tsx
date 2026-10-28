@@ -178,7 +178,6 @@ export default function DispatchOperationsSection({ onToast }: DispatchOperation
       <div className="sa-panel-header">
         <div>
           <h3>Dispatch &amp; operations</h3>
-          <span className="sa-panel-sub">Dispatch jobs, schedules, dispatcher workloads and exceptions across {stateProfile.name}</span>
         </div>
       </div>
 

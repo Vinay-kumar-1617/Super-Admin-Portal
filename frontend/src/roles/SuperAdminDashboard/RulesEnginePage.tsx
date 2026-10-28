@@ -54,12 +54,15 @@ import {
 } from './rulesEngineData'
 
 export type RulesEnginePageProps = {
-  section: string
+  section: RulesPageSection
   domain: RuleDomain
   rules: RuleItem[]
   setRules: Dispatch<SetStateAction<RuleItem[]>>
   onBack: () => void
+  onNavigate: (section: RulesPageSection) => void
 }
+
+export type RulesPageSection = 'Global Rules' | 'Booking Rules' | 'Pricing'
 
 type RuleDraft = Omit<
   RuleItem,
@@ -258,6 +261,7 @@ export default function RulesEnginePage({
   rules,
   setRules,
   onBack,
+  onNavigate,
 }: RulesEnginePageProps) {
   const [tab, setTab] = useState<RulesTab>('library')
   const [view, setView] = useState<'library' | 'builder' | 'detail'>('library')
@@ -265,6 +269,7 @@ export default function RulesEnginePage({
   const [draft, setDraft] = useState<RuleDraft | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [detailTab, setDetailTab] = useState<'overview' | 'versions' | 'audit'>('overview')
+  const [selectedSimPreset, setSelectedSimPreset] = useState('')
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | RuleStatus>('all')
@@ -290,19 +295,42 @@ export default function RulesEnginePage({
 
   const rulesEngineStyles = `
     .re-page { display: grid; gap: 18px; min-width: 0; }
-    .re-header {
-      display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;
-      background: #fff; border: 1px solid rgba(15,23,42,0.08); border-left: 4px solid var(--brand-orange);
-      border-radius: 14px; padding: 20px 22px; box-shadow: 0 12px 28px rgba(15,23,42,0.05);
+    .re-back {
+      display: inline-flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 0; border: 0;
+      background: transparent; color: var(--brand-orange); font: inherit; font-size: 0.78rem; font-weight: 800; cursor: pointer;
     }
-    .re-header h2 { margin: 4px 0 7px; font-size: 1.45rem; }
-    .re-header-copy p { margin: 0; color: var(--muted); line-height: 1.55; max-width: 78ch; font-size: 0.85rem; }
+    .re-back:hover { color: #c94310; text-decoration: underline; }
+    .re-back:focus-visible { outline: 3px solid rgba(255,107,44,0.4); outline-offset: 4px; }
+    .re-controls {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      min-width: 0; flex-wrap: wrap;
+    }
+    .re-domain-tabs { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .re-domain-tab {
+      border: 1px solid rgba(15,23,42,0.1); background: #fff; border-radius: 999px; padding: 8px 14px;
+      color: #475569; font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+    }
+    .re-domain-tab:hover { border-color: rgba(255,107,44,0.4); color: #c94310; }
+    .re-domain-tab.active {
+      border-color: transparent; background: linear-gradient(135deg, var(--brand-orange), var(--brand-orange-deep));
+      color: #fff; box-shadow: 0 10px 22px -10px rgba(239,74,18,0.7);
+    }
     .re-header-actions { display: flex; gap: 8px; flex-wrap: wrap; flex: 0 0 auto; }
+    .re-page-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+    .re-page-actions .re-new-rule { background: linear-gradient(135deg, var(--brand-orange), var(--brand-orange-deep)); box-shadow: 0 8px 18px rgba(239,74,18,0.25); }
+    .re-page-actions .re-new-rule:hover { background: linear-gradient(135deg, var(--brand-orange-deep), #d93d0c); box-shadow: 0 10px 22px rgba(239,74,18,0.35); }
     .re-stats { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 12px; }
     .re-stat {
       display: grid; gap: 6px; padding: 14px 16px; background: #fff; border: 1px solid rgba(15,23,42,0.08);
       border-radius: 12px; box-shadow: 0 10px 22px rgba(15,23,42,0.04);
     }
+    button.re-stat {
+      width: 100%; color: inherit; font: inherit; text-align: left; cursor: pointer;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    button.re-stat:hover { transform: translateY(-2px); border-color: rgba(255,107,44,0.5); }
+    button.re-stat:focus-visible { outline: 3px solid rgba(255,107,44,0.4); outline-offset: 2px; }
+    button.re-stat.selected { border-color: var(--brand-orange); box-shadow: 0 0 0 2px rgba(255,107,44,0.14); }
     .re-stat span { color: var(--muted); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
     .re-stat strong { font-size: 1.35rem; color: #182230; }
     .re-stat.warn { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.07); }
@@ -335,17 +363,26 @@ export default function RulesEnginePage({
     .re-toolbar-title strong { font-size: 0.92rem; color: #182230; }
     .re-toolbar-spacer { margin-left: auto; }
     .re-count { color: var(--muted); font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
-    .re-table-wrap { overflow-x: auto; }
-    .re-table { width: 100%; min-width: 1240px; border-collapse: collapse; text-align: left; font-size: 0.77rem; }
-    .re-table th, .re-table td { padding: 12px; border-bottom: 1px solid rgba(15,23,42,0.06); vertical-align: top; }
-    .re-table th {
-      color: #64748b; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
-      background: #f8fafc;
+    .re-rule-list { display: grid; }
+    .re-rule-row {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 20px; align-items: center;
+      padding: 16px 18px; border-bottom: 1px solid rgba(15,23,42,0.07);
     }
-    .re-table tbody tr:hover { background: rgba(255,107,44,0.03); }
-    .re-rule-cell { display: grid; gap: 5px; min-width: 250px; justify-items: start; }
-    .re-rule-cell strong { font-size: 0.83rem; color: #182230; line-height: 1.35; }
-    .re-rule-cell .re-rule-desc { color: var(--muted); font-size: 0.71rem; line-height: 1.45; }
+    .re-rule-row:last-child { border-bottom: 0; }
+    .re-rule-row:hover { background: #fcfcfd; }
+    .re-rule-main { display: grid; gap: 8px; min-width: 0; }
+    .re-rule-title { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+    .re-rule-title strong { color: #182230; font-size: 0.86rem; line-height: 1.35; }
+    .re-rule-description { margin: 0; color: #64748b; font-size: 0.75rem; line-height: 1.45; }
+    .re-rule-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .re-rule-logic { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+    .re-rule-logic-item { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 7px; min-width: 0; }
+    .re-rule-logic-item > strong {
+      color: #64748b; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .re-rule-logic-item > span { min-width: 0; color: #334155; font-size: 0.72rem; line-height: 1.4; }
+    .re-rule-side { display: grid; justify-items: end; gap: 10px; }
+    .re-rule-dates { display: flex; gap: 12px; justify-content: flex-end; color: #64748b; font-size: 0.68rem; }
     .re-code {
       display: inline-flex; align-items: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 0.67rem; color: #475569; background: #f1f5f9; border: 1px solid rgba(15,23,42,0.1);
@@ -362,7 +399,7 @@ export default function RulesEnginePage({
     .re-chip.scope { background: rgba(124,58,237,0.08); border-color: rgba(124,58,237,0.22); color: #6d28d9; }
     .re-chip.ai { background: rgba(14,165,233,0.1); border-color: rgba(14,165,233,0.28); color: #0369a1; }
     .re-chip.muted { background: #f1f5f9; color: #64748b; border-color: rgba(15,23,42,0.08); }
-    .re-chip-stack { display: flex; flex-wrap: wrap; gap: 5px; max-width: 340px; }
+    .re-chip-stack { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; max-width: none; }
     .re-sub { color: var(--muted); font-size: 0.71rem; line-height: 1.45; }
     .re-priority {
       display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px;
@@ -382,10 +419,10 @@ export default function RulesEnginePage({
     .re-status.scheduled { background: rgba(37,99,235,0.1); color: #1d4ed8; border-color: rgba(37,99,235,0.26); }
     .re-status.paused { background: rgba(245,158,11,0.14); color: #b45309; border-color: rgba(245,158,11,0.3); }
     .re-status.archived { background: rgba(100,116,139,0.14); color: #475569; border-color: rgba(100,116,139,0.3); }
-    .re-row-actions { display: flex; flex-wrap: wrap; gap: 4px; min-width: 250px; }
+    .re-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
     .re-act {
-      border: 1px solid rgba(15,23,42,0.12); background: #fff; border-radius: 7px; padding: 5px 9px;
-      font: inherit; font-size: 0.67rem; font-weight: 800; color: #334155; cursor: pointer; white-space: nowrap;
+      border: 1px solid rgba(15,23,42,0.12); background: #fff; border-radius: 7px; padding: 6px 9px;
+      font: inherit; font-size: 0.68rem; font-weight: 750; color: #334155; cursor: pointer; white-space: nowrap;
     }
     .re-act:hover { border-color: var(--brand-orange); color: var(--brand-orange-deep); }
     .re-act.primary { background: var(--brand-orange); border-color: var(--brand-orange); color: #fff; }
@@ -393,6 +430,16 @@ export default function RulesEnginePage({
     .re-act.danger { color: #b91c1c; border-color: rgba(239,68,68,0.3); }
     .re-act.danger:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.5); color: #b91c1c; }
     .re-act:disabled { opacity: 0.45; cursor: not-allowed; }
+    @media (max-width: 760px) {
+      .re-rule-row { grid-template-columns: minmax(0, 1fr); }
+      .re-rule-side { justify-items: start; }
+      .re-rule-dates { justify-content: flex-start; }
+      .re-row-actions { justify-content: flex-start; }
+    }
+    @media (max-width: 520px) {
+      .re-rule-logic { grid-template-columns: minmax(0, 1fr); }
+      .re-rule-dates { flex-wrap: wrap; }
+    }
     .re-link {
       border: 0; background: transparent; padding: 0; font: inherit; font-size: 0.7rem; font-weight: 800;
       color: var(--brand-orange-deep); cursor: pointer; text-decoration: underline;
@@ -521,7 +568,11 @@ export default function RulesEnginePage({
     .re-version-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 0.71rem; }
     .re-sim-layout { display: grid; grid-template-columns: 330px 1fr; gap: 16px; padding: 18px; align-items: start; }
     .re-sim-side { display: grid; gap: 13px; }
-    .re-preset-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .re-preset-select {
+      width: 100%; padding: 8px 10px; border: 1px solid rgba(15,23,42,0.14); border-radius: 8px;
+      background: #fff; color: #182230; font: inherit; font-size: 0.78rem;
+    }
+    .re-preset-select:focus { outline: none; border-color: var(--brand-orange); box-shadow: 0 0 0 3px rgba(255,107,44,0.14); }
     .re-sim-group {
       border: 1px solid rgba(15,23,42,0.08); border-radius: 10px; padding: 11px; display: grid; gap: 9px; background: #f8fafc;
     }
@@ -695,6 +746,20 @@ export default function RulesEnginePage({
   const hasActiveFilters = Boolean(
     searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' || priorityFilter !== 'all',
   )
+
+  const filterRulesByStatus = (status: RuleStatus | 'all') => {
+    setView('library')
+    setTab('library')
+    setSearchQuery('')
+    setStatusFilter(status)
+    setCategoryFilter('all')
+    setPriorityFilter('all')
+  }
+
+  const openConflictsFromStat = () => {
+    setView('library')
+    setTab('conflicts')
+  }
 
   const showToast = (message: string) => {
     setToastMessage(message)
@@ -1123,6 +1188,7 @@ export default function RulesEnginePage({
   }
 
   const applyPreset = (preset: { label: string; build: () => SimulationContext }) => {
+    setSelectedSimPreset(preset.label)
     setSimContext(preset.build())
     setSimOutcome(null)
   }
@@ -1174,53 +1240,102 @@ export default function RulesEnginePage({
       <style>{statesPageStyles}</style>
       <style>{rulesEngineStyles}</style>
 
-      <header className="re-header">
-        <div className="re-header-copy">
-          <p className="header-kicker">Platform Configuration</p>
-          <h2>{section}</h2>
-          <p>
-            Author, simulate and audit the decision rules that price, block, approve and notify every booking — with
-            version history, conflict detection and AI-assisted drafting.
-          </p>
-        </div>
-        <div className="re-header-actions">
-          <button type="button" className="btn-secondary" onClick={onBack}>
-            Back to dashboard
+      <header className="dashboard-header">
+        <div>
+          <button type="button" className="re-back" onClick={onBack}>
+            <span aria-hidden="true">←</span> Dashboard overview
           </button>
+          <h1 className="header-title">{section}</h1>
+        </div>
+        <span className="chip active">Platform Configuration</span>
+      </header>
+
+      <div className="re-controls">
+        <nav className="re-domain-tabs" aria-label="Platform configuration sections">
+          {(['Global Rules', 'Booking Rules', 'Pricing'] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={`re-domain-tab ${section === item ? 'active' : ''}`}
+              aria-current={section === item ? 'page' : undefined}
+              onClick={() => onNavigate(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+
+        <div className="re-page-actions">
           <button type="button" className="btn-secondary" onClick={openAiModal}>
             Generate Rule with AI
           </button>
-          <button type="button" className="btn-primary" onClick={openCreate}>
+          <button type="button" className="btn-primary re-new-rule" onClick={openCreate}>
             New rule
           </button>
         </div>
-      </header>
+      </div>
 
       <div className="re-stats" aria-label="Rules overview">
-        <div className="re-stat">
+        <button
+          type="button"
+          className={`re-stat ${statusFilter === 'all' && tab === 'library' ? 'selected' : ''}`}
+          onClick={() => filterRulesByStatus('all')}
+          aria-label={`Show all ${stats.total} rules`}
+          aria-pressed={statusFilter === 'all' && tab === 'library'}
+        >
           <span>Total rules</span>
           <strong>{stats.total}</strong>
-        </div>
-        <div className="re-stat">
+        </button>
+        <button
+          type="button"
+          className={`re-stat ${statusFilter === 'Active' && tab === 'library' ? 'selected' : ''}`}
+          onClick={() => filterRulesByStatus('Active')}
+          aria-label={`Show ${stats.active} active rules`}
+          aria-pressed={statusFilter === 'Active' && tab === 'library'}
+        >
           <span>Active</span>
           <strong>{stats.active}</strong>
-        </div>
-        <div className="re-stat">
+        </button>
+        <button
+          type="button"
+          className={`re-stat ${statusFilter === 'Scheduled' && tab === 'library' ? 'selected' : ''}`}
+          onClick={() => filterRulesByStatus('Scheduled')}
+          aria-label={`Show ${stats.scheduled} scheduled rules`}
+          aria-pressed={statusFilter === 'Scheduled' && tab === 'library'}
+        >
           <span>Scheduled</span>
           <strong>{stats.scheduled}</strong>
-        </div>
-        <div className="re-stat">
+        </button>
+        <button
+          type="button"
+          className={`re-stat ${statusFilter === 'Draft' && tab === 'library' ? 'selected' : ''}`}
+          onClick={() => filterRulesByStatus('Draft')}
+          aria-label={`Show ${stats.drafts} draft rules`}
+          aria-pressed={statusFilter === 'Draft' && tab === 'library'}
+        >
           <span>Drafts</span>
           <strong>{stats.drafts}</strong>
-        </div>
-        <div className="re-stat">
+        </button>
+        <button
+          type="button"
+          className={`re-stat ${statusFilter === 'Paused' && tab === 'library' ? 'selected' : ''}`}
+          onClick={() => filterRulesByStatus('Paused')}
+          aria-label={`Show ${stats.paused} paused rules`}
+          aria-pressed={statusFilter === 'Paused' && tab === 'library'}
+        >
           <span>Paused</span>
           <strong>{stats.paused}</strong>
-        </div>
-        <div className="re-stat warn">
+        </button>
+        <button
+          type="button"
+          className={`re-stat warn ${tab === 'conflicts' && view === 'library' ? 'selected' : ''}`}
+          onClick={openConflictsFromStat}
+          aria-label={`Show ${stats.conflicts} potential conflicts`}
+          aria-pressed={tab === 'conflicts' && view === 'library'}
+        >
           <span>Potential conflicts</span>
           <strong>{stats.conflicts}</strong>
-        </div>
+        </button>
       </div>
 
       {effectiveView === 'library' && (
@@ -1313,111 +1428,64 @@ export default function RulesEnginePage({
               </button>
             </div>
           ) : (
-            <div className="re-table-wrap">
-              <table className="re-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Rule</th>
-                    <th scope="col">Category</th>
-                    <th scope="col">Scope</th>
-                    <th scope="col">If</th>
-                    <th scope="col">Then</th>
-                    <th scope="col">Priority</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Effective</th>
-                    <th scope="col">Updated</th>
-                    <th scope="col">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRules.map((rule) => (
-                    <tr key={rule.id}>
-                      <td>
-                        <div className="re-rule-cell">
-                          <span className="re-code">{rule.code}</span>
-                          <strong>{rule.name}</strong>
-                          <span className="re-rule-desc">{rule.description}</span>
-                          {rule.aiGenerated && <span className="re-chip ai">AI draft</span>}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="re-chip">{rule.category}</span>
-                        <div className="re-sub" style={{ marginTop: 5 }}>
-                          {categoryMeta[rule.category].group} group
-                        </div>
-                      </td>
-                      <td>
-                        <span className="re-chip scope">{scopeLabel(rule.scope)}</span>
-                      </td>
-                      <td>
-                        <div className="re-chip-stack">
-                          {rule.conditions.length === 0 && <span className="re-chip muted">Always in scope</span>}
-                          {rule.conditions.slice(0, 2).map((condition) => (
-                            <span key={condition.id} className="re-chip if">
-                              {describeCondition(condition)}
-                            </span>
-                          ))}
-                          {rule.conditions.length > 2 && (
-                            <span className="re-chip muted">+{rule.conditions.length - 2} more</span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="re-chip-stack">
-                          {rule.actions.length === 0 && <span className="re-chip muted">No actions</span>}
-                          {rule.actions.slice(0, 2).map((action) => (
-                            <span key={action.id} className="re-chip then">
-                              {describeAction(action)}
-                            </span>
-                          ))}
-                          {rule.actions.length > 2 && (
-                            <span className="re-chip muted">+{rule.actions.length - 2} more</span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`re-priority ${rule.priority.toLowerCase()}`}>{rule.priority}</span>
-                      </td>
-                      <td>
-                        <span className={`re-status ${rule.status.toLowerCase()}`}>{rule.status}</span>
-                      </td>
-                      <td>
-                        <span className="re-sub">{describeSchedule(rule.schedule)}</span>
-                      </td>
-                      <td>
-                        <span className="re-sub">{prettyDate(rule.updatedDate)}</span>
-                      </td>
-                      <td>
-                        <div className="re-row-actions">
-                          <button type="button" className="re-act" onClick={() => openDetail(rule)}>
-                            View
-                          </button>
-                          <button type="button" className="re-act" onClick={() => openEdit(rule)}>
-                            Edit
-                          </button>
-                          {rule.status === 'Active' ? (
-                            <button type="button" className="re-act" onClick={() => pauseRule(rule)}>
-                              Pause
-                            </button>
-                          ) : rule.status === 'Archived' ? null : (
-                            <button type="button" className="re-act primary" onClick={() => activateRule(rule)}>
-                              {rule.status === 'Draft' ? 'Publish' : 'Activate'}
-                            </button>
-                          )}
-                          <button type="button" className="re-act" onClick={() => duplicateRule(rule)}>
-                            Duplicate
-                          </button>
-                          {rule.status !== 'Archived' && (
-                            <button type="button" className="re-act danger" onClick={() => requestArchive(rule)}>
-                              Archive
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="re-rule-list">
+              {filteredRules.map((rule) => (
+                <article className="re-rule-row" key={rule.id}>
+                  <div className="re-rule-main">
+                    <div className="re-rule-title">
+                      <span className="re-code">{rule.code}</span>
+                      <strong>{rule.name}</strong>
+                      {rule.aiGenerated && <span className="re-chip ai">AI draft</span>}
+                    </div>
+                    <p className="re-rule-description">{rule.description}</p>
+                    <div className="re-rule-meta">
+                      <span className="re-chip">{rule.category}</span>
+                      <span className="re-chip scope">{scopeLabel(rule.scope)}</span>
+                      <span className={`re-priority ${rule.priority.toLowerCase()}`}>{rule.priority}</span>
+                      <span className={`re-status ${rule.status.toLowerCase()}`}>{rule.status}</span>
+                    </div>
+                    <div className="re-rule-logic">
+                      <div className="re-rule-logic-item">
+                        <strong>If</strong>
+                        <span>
+                          {rule.conditions.length === 0
+                            ? 'Always in scope'
+                            : `${describeCondition(rule.conditions[0])}${rule.conditions.length > 1 ? ` · +${rule.conditions.length - 1} more` : ''}`}
+                        </span>
+                      </div>
+                      <div className="re-rule-logic-item">
+                        <strong>Then</strong>
+                        <span>
+                          {rule.actions.length === 0
+                            ? 'No actions'
+                            : `${describeAction(rule.actions[0])}${rule.actions.length > 1 ? ` · +${rule.actions.length - 1} more` : ''}`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="re-rule-side">
+                    <div className="re-rule-dates">
+                      <span>{describeSchedule(rule.schedule)}</span>
+                      <span>Updated {prettyDate(rule.updatedDate)}</span>
+                    </div>
+                    <div className="re-row-actions" aria-label={`Actions for ${rule.name}`}>
+                      <button type="button" className="re-act" onClick={() => openDetail(rule)}>View</button>
+                      <button type="button" className="re-act" onClick={() => openEdit(rule)}>Edit</button>
+                      {rule.status === 'Active' ? (
+                        <button type="button" className="re-act" onClick={() => pauseRule(rule)}>Pause</button>
+                      ) : rule.status === 'Archived' ? null : (
+                        <button type="button" className="re-act primary" onClick={() => activateRule(rule)}>
+                          {rule.status === 'Draft' ? 'Publish' : 'Activate'}
+                        </button>
+                      )}
+                      <button type="button" className="re-act" onClick={() => duplicateRule(rule)}>Duplicate</button>
+                      {rule.status !== 'Archived' && (
+                        <button type="button" className="re-act danger" onClick={() => requestArchive(rule)}>Archive</button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
         </section>
@@ -2296,21 +2364,22 @@ export default function RulesEnginePage({
           <div className="re-sim-layout">
             <aside className="re-sim-side" aria-label="Scenario inputs">
               <div>
-                <h5 className="re-subheading" style={{ marginBottom: 7 }}>
-                  Presets
-                </h5>
-                <div className="re-preset-row">
-                  {simPresets.map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      className="re-doc-chip"
-                      onClick={() => applyPreset(preset)}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
+                <label className="re-sim-field">
+                  <span>Preset scenario</span>
+                  <select
+                    className="re-preset-select"
+                    value={selectedSimPreset}
+                    onChange={(event) => {
+                      const preset = simPresets.find((item) => item.label === event.target.value)
+                      if (preset) applyPreset(preset)
+                    }}
+                  >
+                    <option value="">Choose a scenario...</option>
+                    {simPresets.map((preset) => (
+                      <option key={preset.label} value={preset.label}>{preset.label}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
               <div className="re-sim-fields">
                 <label className="re-sim-field">

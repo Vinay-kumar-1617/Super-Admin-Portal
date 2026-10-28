@@ -118,6 +118,15 @@ function App() {
   const [openDropdown, setOpenDropdown] = useState<'products' | 'brands' | null>(null)
 
   useEffect(() => {
+    const savedTheme = window.localStorage.getItem('equiprent-theme')
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+      document.documentElement.dataset.theme = savedTheme
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+  }, [])
+
+  useEffect(() => {
     if (!supabase) return
 
     let isMounted = true

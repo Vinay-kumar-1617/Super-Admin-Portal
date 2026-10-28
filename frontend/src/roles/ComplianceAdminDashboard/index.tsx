@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { commandCenterStyles } from '../commandCenterStyles'
+import RoleHeaderMenus from '../RoleHeaderMenus'
 import {
   auditTrail,
   buildComplianceAlerts,
@@ -145,12 +146,6 @@ const cfStyles = `
   color: #d9e4f2;
   font-size: 0.64rem;
   font-weight: 700;
-}
-.stateadmin-role-dashboard .dashboard-header {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.92) 100%);
-  border-color: rgba(15, 23, 42, 0.06);
-  box-shadow: 0 24px 60px -28px rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
 }
 .stateadmin-role-dashboard .sa-kpi-card {
   padding: 16px 16px 14px;
@@ -666,7 +661,6 @@ type SectionMeta = {
 
 const sections: SectionMeta[] = [
   { id: 'overview', label: 'Overview', title: 'Compliance overview', crumb: 'Overview' },
-  { id: 'notifications', label: 'Notifications', title: 'Notifications', crumb: 'Notifications' },
   { id: 'vehicles', label: 'Vehicles', title: 'Fleet compliance', crumb: 'Vehicles' },
   { id: 'drivers', label: 'Drivers', title: 'Driver credentials', crumb: 'Drivers' },
   { id: 'violations', label: 'Violations', title: 'Violations & notices', crumb: 'Violations' },
@@ -679,6 +673,7 @@ const sections: SectionMeta[] = [
   { id: 'expiries', label: 'Expiry tracking', title: 'Expiry tracking & reminders', crumb: 'Expiry' },
   { id: 'escalations', label: 'Escalations', title: 'Escalation desk', crumb: 'Escalations' },
   { id: 'reports', label: 'Reports', title: 'Reports & audit', crumb: 'Reports' },
+  { id: 'notifications', label: 'Notifications', title: 'Notifications', crumb: 'Notifications' },
   { id: 'rules', label: 'Rules & permissions', title: 'Rules & permissions', crumb: 'Rules' },
 ]
 
@@ -1599,11 +1594,14 @@ export default function ComplianceAdminDashboard({ onSignOut }: ComplianceAdminD
 
       <div className="sa-main">
         <header className="dashboard-header">
-          <div className="header-copy">
-            <p className="header-kicker">{complianceProfile.name} · Compliance command</p>
-            <h1 className="header-title">{sectionMeta.title}</h1>
-            <div className="header-breadcrumb">
-              Overview / {complianceProfile.name} / {sectionMeta.crumb}
+          <div className="role-header-leading">
+            <div className="role-header-brand" aria-label="EquipHub">
+              <span className="role-header-brand-mark" aria-hidden="true">E</span>
+              <span>EquipHub</span>
+            </div>
+            <div className="header-copy">
+              <h1 className="header-title">{sectionMeta.title}</h1>
+              <div className="header-breadcrumb">Compliance · {complianceProfile.name}</div>
             </div>
           </div>
 
@@ -1654,7 +1652,7 @@ export default function ComplianceAdminDashboard({ onSignOut }: ComplianceAdminD
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'notifications' ? 'is-open' : ''}`}
@@ -1714,7 +1712,7 @@ export default function ComplianceAdminDashboard({ onSignOut }: ComplianceAdminD
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'alerts' ? 'is-open' : ''}`}
@@ -1753,7 +1751,7 @@ export default function ComplianceAdminDashboard({ onSignOut }: ComplianceAdminD
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'period' ? 'is-open' : ''}`}
@@ -1785,7 +1783,7 @@ export default function ComplianceAdminDashboard({ onSignOut }: ComplianceAdminD
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+              <div className="legacy-profile-control" style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
                 <button
                   type="button"
                   className="header-avatar"
@@ -1800,6 +1798,38 @@ export default function ComplianceAdminDashboard({ onSignOut }: ComplianceAdminD
                 </span>
                 <button type="button" className="org-button" onClick={onSignOut}>Logout</button>
               </div>
+              <RoleHeaderMenus
+                notifications={notifications.map((item) => ({
+                  id: item.id,
+                  title: item.title,
+                  detail: `${item.category} · ${item.detail}`,
+                  time: `${item.priority} · ${item.time}`,
+                  tone: item.tone,
+                  read: item.read,
+                  target: item.target,
+                }))}
+                alerts={alerts.filter((item) => !acknowledgedAlerts.includes(item.id)).map((item) => ({
+                  id: item.id,
+                  title: item.title,
+                  detail: item.detail,
+                  time: item.due,
+                  severity: item.severity,
+                  target: alertTargetSection(item.category),
+                }))}
+                initials={complianceProfile.adminInitials}
+                onNotificationClick={(item) => {
+                  const notification = notifications.find((entry) => entry.id === item.id)
+                  if (notification) openNotification(notification)
+                }}
+                onAlertClick={(item) => {
+                  const alert = alerts.find((entry) => entry.id === item.id)
+                  if (alert) openAlert(alert)
+                }}
+                onMarkAllRead={markAllNotificationsRead}
+                onSignOut={onSignOut}
+                onAlertsFooter={() => openFeedTarget('overview')}
+                alertsFooterLabel="Open compliance dashboard"
+              />
             </div>
           </div>
         </header>

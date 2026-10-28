@@ -6,7 +6,7 @@ export type AttentionKpi = {
   slug: AttentionSlug
   title: string
   kicker: string
-  description: string
+  description?: string
   tone: AttentionTone
 }
 
@@ -15,32 +15,24 @@ export const attentionKpis: AttentionKpi[] = [
     slug: 'payouts-awaiting-approval',
     title: 'Payouts awaiting approval',
     kicker: 'National overview / Finance queue',
-    description:
-      'Partner payout requests held for finance review. Approving releases the amount to the partner account, rejecting removes the request from the queue.',
     tone: 'amber',
   },
   {
     slug: 'security-alerts',
     title: 'Security alerts',
     kicker: 'National overview / Platform health',
-    description:
-      'Open security signals raised by the auth, fraud and gateway monitors. Resolve an alert after investigation or dismiss it as a false positive.',
     tone: 'red',
   },
   {
     slug: 'unassigned-jobs',
     title: 'Unassigned jobs',
     kicker: 'National overview / Dispatch queue',
-    description:
-      'Confirmed booking requests waiting for an operator assignment. Pick an operator from the list and assign the job to move it into dispatch.',
     tone: 'blue',
   },
   {
     slug: 'kyc-reviews',
     title: 'KYC reviews',
     kicker: 'National overview / Partner verification',
-    description:
-      'Partner applications waiting on document verification. Approve a clean application, reject it, or request additional documents from the applicant.',
     tone: 'green',
   },
 ]

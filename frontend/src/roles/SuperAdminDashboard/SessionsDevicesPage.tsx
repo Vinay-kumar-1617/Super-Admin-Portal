@@ -5,9 +5,10 @@ type SessionsDevicesPageProps = {
   staff: StaffAccount[]
   setStaff: React.Dispatch<React.SetStateAction<StaffAccount[]>>
   onBack?: () => void
+  embedded?: boolean
 }
 
-export default function SessionsDevicesPage({ staff, setStaff, onBack }: SessionsDevicesPageProps) {
+export default function SessionsDevicesPage({ staff, setStaff, onBack, embedded = false }: SessionsDevicesPageProps) {
   const [notice, setNotice] = useState<string | null>(null)
 
   const updateAccount = (id: string, updates: Partial<StaffAccount>) => {
@@ -106,21 +107,19 @@ export default function SessionsDevicesPage({ staff, setStaff, onBack }: Session
         .header-action { border: 1px solid rgba(15,23,42,0.12); border-radius: 10px; padding: 8px 10px; background: #fff; color: #182230; font: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
       `}</style>
 
-      <header className="access-admin-header">
-        <div>
-          <span className="access-admin-kicker">Security</span>
-          <h2>Sessions &amp; devices</h2>
-          <p>
-            Monitor every signed-in device, terminate suspicious sessions and manage two-factor enforcement. Session and MFA
-            changes take effect immediately.
-          </p>
-        </div>
-        {onBack ? (
-          <button type="button" className="header-action" onClick={onBack}>
-            Back to dashboard
-          </button>
-        ) : null}
-      </header>
+      {!embedded && (
+        <header className="access-admin-header">
+          <div>
+            <span className="access-admin-kicker">Security</span>
+            <h2>Sessions &amp; devices</h2>
+          </div>
+          {onBack ? (
+            <button type="button" className="header-action" onClick={onBack}>
+              Back to dashboard
+            </button>
+          ) : null}
+        </header>
+      )}
 
       <div className="access-admin-summary">
         <div className="access-admin-metric">

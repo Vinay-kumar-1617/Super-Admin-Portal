@@ -202,7 +202,7 @@ export const complianceAudits: ComplianceAudit[] = [
   },
   {
     id: 'AUD-119',
-    title: 'Night inspection sample',
+    title: 'Night inspection',
     scope: 'Skid steer and compactor cluster in Nalgonda',
     auditor: 'Inspector R. Devi',
     scheduledOn: '13 Oct 2026',
@@ -227,7 +227,7 @@ export const complianceAudits: ComplianceAudit[] = [
   {
     id: 'AUD-121',
     title: 'Driver credential re-verification drive',
-    scope: 'State-wide operator and driver sample',
+    scope: 'State-wide operator and driver review',
     auditor: 'Compliance Admin Desk',
     scheduledOn: '31 Oct 2026',
     daysUntil: 21,

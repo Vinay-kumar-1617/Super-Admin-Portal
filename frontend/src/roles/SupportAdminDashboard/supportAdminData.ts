@@ -1,7 +1,20 @@
 // Seed data, types and metadata for the Hyderabad Support Admin dashboard.
 import { emailForRole } from '../../auth/roleAccounts'
 
-export type SectionId = 'overview' | 'tickets' | 'bookings' | 'users' | 'refunds' | 'escalations' | 'reports'
+export type SectionId =
+  | 'overview'
+  | 'tickets'
+  | 'customer-support'
+  | 'owner-support'
+  | 'operator-support'
+  | 'live-chat'
+  | 'bookings'
+  | 'users'
+  | 'payment-support'
+  | 'refunds'
+  | 'escalations'
+  | 'reports'
+  | 'notifications'
 
 export type SectionMeta = {
   id: SectionId
@@ -13,11 +26,17 @@ export type SectionMeta = {
 export const supportSections: SectionMeta[] = [
   { id: 'overview', label: 'Overview', title: 'Support overview', crumb: 'Overview' },
   { id: 'tickets', label: 'Tickets', title: 'Ticket desk', crumb: 'Tickets' },
-  { id: 'bookings', label: 'Booking help', title: 'Booking assistance', crumb: 'Booking help' },
+  { id: 'customer-support', label: 'Customer Support', title: 'Customer support', crumb: 'Customer Support' },
+  { id: 'owner-support', label: 'Owner Support', title: 'Owner support', crumb: 'Owner Support' },
+  { id: 'operator-support', label: 'Operator Support', title: 'Operator support', crumb: 'Operator Support' },
+  { id: 'live-chat', label: 'Live Chat', title: 'Live chat & conversations', crumb: 'Live Chat' },
+  { id: 'bookings', label: 'Booking & rental issues', title: 'Booking & rental support', crumb: 'Booking support' },
+  { id: 'payment-support', label: 'Payment & refund support', title: 'Payment & refund support', crumb: 'Payment support' },
   { id: 'users', label: 'User lookup', title: 'User lookup (masked)', crumb: 'User lookup' },
   { id: 'refunds', label: 'Refunds', title: 'Refund requests', crumb: 'Refunds' },
   { id: 'escalations', label: 'Escalations', title: 'Escalation desk', crumb: 'Escalations' },
   { id: 'reports', label: 'Reports', title: 'Reports & audit', crumb: 'Reports' },
+  { id: 'notifications', label: 'Notifications', title: 'Support notifications', crumb: 'Notifications' },
 ]
 
 export const supportPeriods = ['Today', 'This Week', 'This Month', 'This Quarter'] as const
@@ -360,6 +379,49 @@ export const savedReplies: SavedReply[] = [
   { id: 'sr-4', title: 'How to reschedule', body: 'You can reschedule from the booking screen up to 4 hours before the slot at no cost. Inside 4 hours a nominal rescheduling fee may apply.' },
 ]
 
+export type ChatAttachment = { name: string; type: string; size: number }
+export type ChatMessage = { id: string; author: string; role: 'Customer' | 'Support'; body: string; time: string; attachments: ChatAttachment[] }
+export type ChatStatus = 'Open' | 'Pending' | 'Closed'
+export type LiveConversation = {
+  id: string
+  customer: string
+  customerType: RequesterType
+  booking: string
+  subject: string
+  status: ChatStatus
+  assignee: string
+  unread: number
+  updated: string
+  messages: ChatMessage[]
+}
+
+export const liveConversations: LiveConversation[] = [
+  {
+    id: 'CH-2104', customer: 'Karan Patel', customerType: 'Customer', booking: 'BK-88213',
+    subject: 'Operator has not arrived', status: 'Open', assignee: 'Anita Shah', unread: 2, updated: '09:42',
+    messages: [
+      { id: 'ch1', author: 'Karan Patel', role: 'Customer', body: 'The operator has not arrived for the 9 AM slot. Can you check?', time: '09:15', attachments: [] },
+      { id: 'ch2', author: 'Anita Shah', role: 'Support', body: 'I’m checking with dispatch now. I’ll update you shortly.', time: '09:21', attachments: [] },
+      { id: 'ch3', author: 'Karan Patel', role: 'Customer', body: 'I have added a photo of the delivery entrance for reference.', time: '09:42', attachments: [{ name: 'site-entrance.jpg', type: 'image/jpeg', size: 284000 }] },
+    ],
+  },
+  {
+    id: 'CH-2103', customer: 'Neha Rao', customerType: 'Customer', booking: 'BK-90112',
+    subject: 'Duplicate payment confirmation', status: 'Open', assignee: 'Unassigned', unread: 1, updated: '09:10',
+    messages: [
+      { id: 'ch1', author: 'Neha Rao', role: 'Customer', body: 'My bank shows two charges for the same booking. Please confirm the reversal.', time: '08:48', attachments: [] },
+    ],
+  },
+  {
+    id: 'CH-2102', customer: 'Sri Balaji Rentals', customerType: 'Owner', booking: '—',
+    subject: 'Payout statement question', status: 'Pending', assignee: 'Ravi Deshmukh', unread: 0, updated: 'Yesterday',
+    messages: [
+      { id: 'ch1', author: 'Sri Balaji Rentals', role: 'Customer', body: 'Can someone explain the adjustment on my March settlement?', time: 'Yesterday', attachments: [] },
+      { id: 'ch2', author: 'Ravi Deshmukh', role: 'Support', body: 'I have asked Finance to verify the adjustment and will follow up here.', time: 'Yesterday', attachments: [] },
+    ],
+  },
+]
+
 // ---------------------------------------------------------------------------
 // Booking assistance
 // ---------------------------------------------------------------------------
@@ -376,11 +438,16 @@ export type SupportBooking = {
   ownerMasked: string
   operator: string
   operatorMasked: string
+  equipmentType: string
   machine: string
   zone: string
   window: string
+  rentalStart: string
+  rentalEnd: string
   amount: string
   status: BookingStatus
+  cancellationReason: string | null
+  disputeHistory: BookingHistoryEvent[]
   history: BookingHistoryEvent[]
 }
 
@@ -393,11 +460,16 @@ export const bookings: SupportBooking[] = [
     ownerMasked: '+91 ••••• 88221',
     operator: 'Imran Khan',
     operatorMasked: '+91 ••••• 11002',
+    equipmentType: 'Backhoe loader',
     machine: 'JCB 3DX · TS09 AB 4321',
     zone: 'HITEC City',
     window: '02 Apr · 09:00 – 13:00',
+    rentalStart: '02 Apr 2026 · 09:00',
+    rentalEnd: '02 Apr 2026 · 13:00',
     amount: '₹48,000',
     status: 'In progress',
+    cancellationReason: null,
+    disputeHistory: [],
     history: [
       { id: 'h1', time: '01 Apr 18:20', label: 'Booking confirmed', actor: 'Karan Patel', detail: 'Payment authorised and slot reserved.' },
       { id: 'h2', time: '01 Apr 19:05', label: 'Operator assigned', actor: 'Dispatch', detail: 'Imran Khan assigned to the slot.' },
@@ -412,11 +484,16 @@ export const bookings: SupportBooking[] = [
     ownerMasked: '+91 ••••• 33019',
     operator: 'Vikram Singh',
     operatorMasked: '+91 ••••• 20881',
+    equipmentType: 'Mobile crane',
     machine: 'Crane 20T · TS10 CD 1188',
     zone: 'Gachibowli',
     window: '03 Apr · 07:00 – 12:00',
+    rentalStart: '03 Apr 2026 · 07:00',
+    rentalEnd: '03 Apr 2026 · 12:00',
     amount: '₹12,500',
     status: 'Confirmed',
+    cancellationReason: null,
+    disputeHistory: [],
     history: [
       { id: 'h1', time: '02 Apr 08:30', label: 'Booking confirmed', actor: 'Neha Rao', detail: 'First debit captured.' },
       { id: 'h2', time: '02 Apr 08:38', label: 'Duplicate payment', actor: 'Gateway', detail: 'Second debit captured in error.' },
@@ -431,11 +508,16 @@ export const bookings: SupportBooking[] = [
     ownerMasked: '+91 ••••• 66442',
     operator: 'Anand Rao',
     operatorMasked: '+91 ••••• 90210',
+    equipmentType: 'Hydraulic excavator',
     machine: 'Excavator EX-210 · TS09 EF 7788',
     zone: 'Kokapet',
     window: '02 Apr · 08:00 – 12:00',
+    rentalStart: '02 Apr 2026 · 08:00',
+    rentalEnd: '02 Apr 2026 · 12:00',
     amount: '₹22,500',
     status: 'In progress',
+    cancellationReason: null,
+    disputeHistory: [],
     history: [
       { id: 'h1', time: '01 Apr 20:10', label: 'Booking confirmed', actor: 'Zainab Ali', detail: 'Slot reserved for Gachibowli.' },
       { id: 'h2', time: '02 Apr 08:05', label: 'Wrong location', actor: 'Zainab Ali', detail: 'Machine delivered to Kokapet instead of Gachibowli.' },
@@ -450,11 +532,18 @@ export const bookings: SupportBooking[] = [
     ownerMasked: '+91 ••••• 40912',
     operator: 'Vikram Singh',
     operatorMasked: '+91 ••••• 20881',
+    equipmentType: 'Industrial generator',
     machine: 'Generator 100kVA · TS11 GH 2210',
     zone: 'Madhapur',
     window: '31 Mar · 10:00 – 18:00',
+    rentalStart: '31 Mar 2026 · 10:00',
+    rentalEnd: '31 Mar 2026 · 18:00',
     amount: '₹15,000',
     status: 'Completed',
+    cancellationReason: null,
+    disputeHistory: [
+      { id: 'd1', time: '31 Mar 15:10', label: 'Partial refund disputed', actor: 'Mohit Jain', detail: 'Customer disputes the partial damage refund. Ticket TK-4772 reopened for review.' },
+    ],
     history: [
       { id: 'h1', time: '30 Mar 16:00', label: 'Booking confirmed', actor: 'Mohit Jain', detail: 'Payment authorised.' },
       { id: 'h2', time: '31 Mar 18:10', label: 'Completed', actor: 'Operator', detail: 'Job completed, damage reported.' },
@@ -469,14 +558,45 @@ export const bookings: SupportBooking[] = [
     ownerMasked: '+91 ••••• 55018',
     operator: 'Imran Khan',
     operatorMasked: '+91 ••••• 11002',
+    equipmentType: 'Backhoe loader',
     machine: 'JCB 3DX · TS09 AB 1190',
     zone: 'Kondapur',
     window: '02 Apr · 10:00 – 14:00',
+    rentalStart: '02 Apr 2026 · 10:00',
+    rentalEnd: '02 Apr 2026 · 14:00',
     amount: '₹31,200',
     status: 'Confirmed',
+    cancellationReason: null,
+    disputeHistory: [],
     history: [
       { id: 'h1', time: '01 Apr 21:00', label: 'Booking confirmed', actor: 'Priya Nair', detail: 'Slot reserved.' },
       { id: 'h2', time: '02 Apr 09:35', label: 'Ticket raised', actor: 'Priya Nair', detail: 'Ticket TK-4815 for extra cash demand.' },
+    ],
+  },
+  {
+    id: 'BK-88360',
+    customer: 'Aarav Mehta',
+    customerMasked: '+91 ••••• 41826',
+    owner: 'Deccan Earthmovers',
+    ownerMasked: '+91 ••••• 74016',
+    operator: 'Not assigned',
+    operatorMasked: '—',
+    equipmentType: 'Wheel loader',
+    machine: 'CAT 950 GC · TS08 JK 6042',
+    zone: 'Miyapur',
+    window: '04 Apr · 08:00 – 12:00',
+    rentalStart: '04 Apr 2026 · 08:00',
+    rentalEnd: '04 Apr 2026 · 12:00',
+    amount: '₹18,000',
+    status: 'Cancelled',
+    cancellationReason: 'Customer cancelled because the project schedule changed before dispatch.',
+    disputeHistory: [
+      { id: 'd1', time: '03 Apr 17:25', label: 'Cancellation fee disputed', actor: 'Aarav Mehta', detail: 'Customer requested a review of the cancellation fee; support is checking the cancellation window.' },
+    ],
+    history: [
+      { id: 'h1', time: '02 Apr 16:40', label: 'Booking confirmed', actor: 'Aarav Mehta', detail: 'Rental slot confirmed and payment authorised.' },
+      { id: 'h2', time: '03 Apr 17:20', label: 'Booking cancelled', actor: 'Aarav Mehta', detail: 'Customer cancelled after project timing changed.' },
+      { id: 'h3', time: '03 Apr 17:25', label: 'Cancellation fee disputed', actor: 'Aarav Mehta', detail: 'Ticket opened to review the cancellation fee.' },
     ],
   },
 ]
@@ -541,6 +661,32 @@ export const supportRefunds: SupportRefund[] = [
   { id: 'RF-2201', booking: 'BK-88110', ticket: '—', customer: 'Amit Singh', amount: '₹9,800', numericAmount: 9800, reason: 'Damage dispute partial', status: 'Rejected', createdAt: '2026-03-30 14:10', note: 'Rejected in policy review' },
 ]
 
+export type PaymentIssueType = 'Failed payment' | 'Duplicate transaction' | 'Refund request' | 'Payment discrepancy' | 'Settlement complaint'
+export type PaymentResolutionStatus = 'Open' | 'Investigating' | 'Resolved' | 'Escalated'
+
+export type SupportPaymentIssue = {
+  id: string
+  reference: string
+  booking: string
+  ticket: string
+  reporter: string
+  reporterType: UserType
+  issueType: PaymentIssueType
+  amount: string
+  reportedAt: string
+  status: PaymentResolutionStatus
+  summary: string
+  resolution: string
+}
+
+export const supportPaymentIssues: SupportPaymentIssue[] = [
+  { id: 'PI-3105', reference: 'TXN-8F21-9041', booking: 'BK-90112', ticket: 'TK-4820', reporter: 'Neha Rao', reporterType: 'Customer', issueType: 'Duplicate transaction', amount: '₹12,500', reportedAt: '2026-04-02 08:40', status: 'Investigating', summary: 'Two card debits appear for one confirmed booking.', resolution: 'Gateway trace requested; verify the duplicate authorisation before refund.' },
+  { id: 'PI-3104', reference: 'TXN-7A30-1128', booking: 'BK-88213', ticket: '—', reporter: 'Karan Patel', reporterType: 'Customer', issueType: 'Failed payment', amount: '₹48,000', reportedAt: '2026-04-02 08:12', status: 'Open', summary: 'Payment attempt timed out, but the customer is unsure whether the charge went through.', resolution: 'Check gateway result and confirm whether the booking payment was captured.' },
+  { id: 'PI-3103', reference: 'RFND-2204', booking: 'BK-88320', ticket: 'TK-4815', reporter: 'Priya Nair', reporterType: 'Customer', issueType: 'Refund request', amount: '₹4,800', reportedAt: '2026-04-02 09:40', status: 'Open', summary: 'Customer credit is approved but not yet visible in the original payment method.', resolution: 'Confirm refund processing status and expected bank settlement time.' },
+  { id: 'PI-3102', reference: 'TXN-6D19-7783', booking: 'BK-88310', ticket: 'TK-4772', reporter: 'Mohit Jain', reporterType: 'Customer', issueType: 'Payment discrepancy', amount: '₹3,200', reportedAt: '2026-04-01 09:20', status: 'Resolved', summary: 'Customer disputes the amount returned after a damage deduction.', resolution: 'Refund RF-2210 processed; customer updated with the adjustment breakdown.' },
+  { id: 'PI-3101', reference: 'SET-APR-0098', booking: '—', ticket: 'TK-4818', reporter: 'Sri Balaji Rentals', reporterType: 'Owner', issueType: 'Settlement complaint', amount: '₹18,400', reportedAt: '2026-04-01 07:50', status: 'Escalated', summary: 'Owner reports that the March payout statement does not match the expected net earnings.', resolution: 'Statement and booking adjustments sent to Finance Admin for reconciliation.' },
+]
+
 // ---------------------------------------------------------------------------
 // Escalations
 // ---------------------------------------------------------------------------
@@ -556,6 +702,11 @@ export type SupportEscalation = {
   target: EscalationTarget
   reason: string
   status: EscalationStatus
+  priority: TicketPriority
+  level: 'Level 1' | 'Level 2' | 'Level 3'
+  slaDeadline: string
+  progress: number
+  resolutionNote: string
   opened: string
   ticket: string
 }
@@ -577,11 +728,11 @@ export const escalationCategories: EscalationCategory[] = [
 export const escalationTargets: EscalationTarget[] = ['City admin', 'Finance admin', 'Compliance admin', 'Operations manager']
 
 export const supportEscalations: SupportEscalation[] = [
-  { id: 'ESC-118', subject: 'Operator shortage in Kondapur cluster', category: 'Operational urgency', target: 'Operations manager', reason: 'Three bookings at risk this morning with no available operators.', status: 'Acknowledged', opened: '2026-04-02 08:55', ticket: '—' },
-  { id: 'ESC-117', subject: 'Damage claim dispute on BK-88310', category: 'Dispute / damage', target: 'City admin', reason: 'Customer disputes the damage deduction, needs city admin decision.', status: 'Open', opened: '2026-04-01 17:10', ticket: 'TK-4772' },
-  { id: 'ESC-116', subject: 'Payout statement mismatch', category: 'Payment problem', target: 'Finance admin', reason: 'Owner reports a difference between the app and the payout statement.', status: 'Open', opened: '2026-04-01 15:40', ticket: 'TK-4818' },
-  { id: 'ESC-115', subject: 'Operator licence document expired', category: 'Compliance / document', target: 'Compliance admin', reason: 'Operator operating with an expired licence document.', status: 'Resolved', opened: '2026-03-30 11:20', ticket: '—' },
-  { id: 'ESC-114', subject: 'Customer KYC name mismatch', category: 'Compliance / document', target: 'Compliance admin', reason: 'KYC name does not match the booking name.', status: 'Resolved', opened: '2026-03-28 09:15', ticket: '—' },
+  { id: 'ESC-118', subject: 'Operator shortage in Kondapur cluster', category: 'Operational urgency', target: 'Operations manager', reason: 'Three bookings at risk this morning with no available operators.', status: 'Acknowledged', priority: 'Urgent', level: 'Level 2', slaDeadline: '2026-04-02 11:00', progress: 45, resolutionNote: '', opened: '2026-04-02 08:55', ticket: '—' },
+  { id: 'ESC-117', subject: 'Damage claim dispute on BK-88310', category: 'Dispute / damage', target: 'City admin', reason: 'Customer disputes the damage deduction, needs city admin decision.', status: 'Open', priority: 'High', level: 'Level 2', slaDeadline: '2026-04-02 17:00', progress: 25, resolutionNote: '', opened: '2026-04-01 17:10', ticket: 'TK-4772' },
+  { id: 'ESC-116', subject: 'Payout statement mismatch', category: 'Payment problem', target: 'Finance admin', reason: 'Owner reports a difference between the app and the payout statement.', status: 'Open', priority: 'High', level: 'Level 1', slaDeadline: '2026-04-02 15:40', progress: 30, resolutionNote: '', opened: '2026-04-01 15:40', ticket: 'TK-4818' },
+  { id: 'ESC-115', subject: 'Operator licence document expired', category: 'Compliance / document', target: 'Compliance admin', reason: 'Operator operating with an expired licence document.', status: 'Resolved', priority: 'Normal', level: 'Level 1', slaDeadline: '2026-03-31 11:20', progress: 100, resolutionNote: 'Expired operator document verified and access restricted pending renewal.', opened: '2026-03-30 11:20', ticket: '—' },
+  { id: 'ESC-114', subject: 'Customer KYC name mismatch', category: 'Compliance / document', target: 'Compliance admin', reason: 'KYC name does not match the booking name.', status: 'Resolved', priority: 'Normal', level: 'Level 1', slaDeadline: '2026-03-29 09:15', progress: 100, resolutionNote: 'Customer identity details reviewed and corrected.', opened: '2026-03-28 09:15', ticket: '—' },
 ]
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { commandCenterStyles } from '../commandCenterStyles'
+import RoleHeaderMenus from '../RoleHeaderMenus'
 import {
   bookingRows,
   dashboardPeriods,
@@ -411,13 +412,6 @@ export default function ZoneAdminDashboard({ onSignOut }: ZoneAdminDashboardProp
           font-weight: 700;
         }
 
-        .stateadmin-role-dashboard .dashboard-header {
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.92) 100%);
-          border-color: rgba(15, 23, 42, 0.06);
-          box-shadow: 0 24px 60px -28px rgba(15, 23, 42, 0.6);
-          backdrop-filter: blur(4px);
-        }
-
         .stateadmin-role-dashboard .sa-kpi-card {
           padding: 16px 16px 14px;
           gap: 12px;
@@ -585,13 +579,14 @@ export default function ZoneAdminDashboard({ onSignOut }: ZoneAdminDashboardProp
 
       <div className="sa-main">
         <header className="dashboard-header">
-          <div className="header-copy">
-            <p className="header-kicker">
-              {zoneProfile.state} · {zoneProfile.name} command
-            </p>
-            <h1 className="header-title">{sectionMeta.title}</h1>
-            <div className="header-breadcrumb">
-              Overview / {zoneProfile.state} / {zoneProfile.name} / {sectionMeta.crumb}
+          <div className="role-header-leading">
+            <div className="role-header-brand" aria-label="EquipHub">
+              <span className="role-header-brand-mark" aria-hidden="true">E</span>
+              <span>EquipHub</span>
+            </div>
+            <div className="header-copy">
+              <h1 className="header-title">{sectionMeta.title}</h1>
+              <div className="header-breadcrumb">{zoneProfile.state} · {zoneProfile.name}</div>
             </div>
           </div>
 
@@ -642,7 +637,7 @@ export default function ZoneAdminDashboard({ onSignOut }: ZoneAdminDashboardProp
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'notifications' ? 'is-open' : ''}`}
@@ -687,7 +682,7 @@ export default function ZoneAdminDashboard({ onSignOut }: ZoneAdminDashboardProp
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'alerts' ? 'is-open' : ''}`}
@@ -732,7 +727,7 @@ export default function ZoneAdminDashboard({ onSignOut }: ZoneAdminDashboardProp
                 )}
               </div>
 
-              <div className="header-popover-wrap">
+              <div className="header-popover-wrap legacy-header-control">
                 <button
                   type="button"
                   className={`header-action ${headerPanel === 'period' ? 'is-open' : ''}`}
@@ -764,10 +759,21 @@ export default function ZoneAdminDashboard({ onSignOut }: ZoneAdminDashboardProp
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+              <div className="legacy-profile-control" style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
                 <div className="header-avatar">{zoneProfile.adminInitials}</div>
                 <button type="button" className="org-button" onClick={onSignOut}>Logout</button>
               </div>
+              <RoleHeaderMenus
+                notifications={notifications}
+                alerts={zoneAlerts}
+                initials={zoneProfile.adminInitials}
+                onNotificationClick={(item) => { markNotificationRead(item.id); openFeedTarget(item.target) }}
+                onAlertClick={(item) => openFeedTarget(item.target)}
+                onMarkAllRead={markAllNotificationsRead}
+                onSignOut={onSignOut}
+                onAlertsFooter={() => openFeedTarget('requests')}
+                alertsFooterLabel="Open requests"
+              />
             </div>
           </div>
         </header>

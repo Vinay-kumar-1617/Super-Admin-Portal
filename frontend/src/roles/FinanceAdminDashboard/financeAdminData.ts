@@ -1,15 +1,21 @@
 // Seed data, types and metadata for the global Finance Admin dashboard.
-import { emailForRole } from '../../auth/roleAccounts'
+import { emailForRole } from '../../auth/roleAccounts.ts'
 
 export type SectionId =
   | 'overview'
   | 'commission'
   | 'settlements'
+  | 'owner-settlements'
+  | 'operator-payments'
+  | 'customer-payments'
   | 'payouts'
   | 'invoices'
   | 'refunds'
   | 'reconciliation'
+  | 'approvals'
   | 'reports'
+  | 'audit-log'
+  | 'notifications'
 
 export type SectionMeta = {
   id: SectionId
@@ -22,11 +28,17 @@ export const financeSections: SectionMeta[] = [
   { id: 'overview', label: 'Overview', title: 'Finance overview', crumb: 'Overview' },
   { id: 'commission', label: 'Commission', title: 'Commission controls', crumb: 'Commission' },
   { id: 'settlements', label: 'Settlements', title: 'Settlement runs', crumb: 'Settlements' },
+  { id: 'owner-settlements', label: 'Owner settlements', title: 'Owner settlement center', crumb: 'Owner Settlements' },
+  { id: 'operator-payments', label: 'Operator payments', title: 'Operator payment center', crumb: 'Operator Payments' },
+  { id: 'customer-payments', label: 'Customer payments', title: 'Customer payment management', crumb: 'Customer Payments' },
   { id: 'payouts', label: 'Payouts', title: 'Payout approvals', crumb: 'Payouts' },
   { id: 'invoices', label: 'Invoices', title: 'Invoices & statements', crumb: 'Invoices' },
   { id: 'refunds', label: 'Refunds', title: 'Refund approvals', crumb: 'Refunds' },
   { id: 'reconciliation', label: 'Reconciliation', title: 'Reconciliation', crumb: 'Reconciliation' },
-  { id: 'reports', label: 'Reports', title: 'Reports & audit', crumb: 'Reports' },
+  { id: 'approvals', label: 'Approval center', title: 'Finance approval center', crumb: 'Approvals' },
+  { id: 'reports', label: 'Reports', title: 'Finance reports', crumb: 'Reports' },
+  { id: 'audit-log', label: 'Audit Log', title: 'Finance audit log', crumb: 'Audit Log' },
+  { id: 'notifications', label: 'Notifications', title: 'Finance notifications', crumb: 'Notifications' },
 ]
 
 export const financePeriods = ['This Month', 'Last Month', 'This Quarter', 'This Year'] as const

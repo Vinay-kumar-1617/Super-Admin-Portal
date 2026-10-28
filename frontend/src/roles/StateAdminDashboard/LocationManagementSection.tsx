@@ -195,7 +195,7 @@ export default function LocationManagementSection({ onToast }: LocationManagemen
       <div className="sa-panel-header">
         <div>
           <h3>Location management</h3>
-          <span className="sa-panel-sub">Cities, zones, admin assignments and location performance across {stateProfile.name}</span>
+     
         </div>
         <div className="finance-header-controls">
           <span className="sa-pill green">Create &amp; edit authorized</span>
